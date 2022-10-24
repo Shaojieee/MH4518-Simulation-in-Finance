@@ -1,4 +1,4 @@
-payoff <- function(aapl, amzn, googl){
+payoff_maturity <- function(aapl, amzn, googl){
   aapl_barrier = 85.760
   amzn_barrier = 69.115
   googl_barrier = 58.605
@@ -31,4 +31,19 @@ payoff <- function(aapl, amzn, googl){
     return (1000*1.1)
   }
   
+}
+
+payoff_quarter <- function(aapl, amzn, googl, quarter){
+  aapl_initial = 171.52
+  amzn_initial = 138.23
+  googl_initial = 117.21
+  
+  if (Reduce('|', aapl<=aapl_inital)|Reduce('|', amzn<=amzn_initial)|Reduce('|', googl<=googl_initial)){
+    return (0)
+  }else if (quarter==2){
+    return (1000*1.05)
+  }else if (quarter==3){
+    return (1000*1.075)
+  }
+  return (0)
 }
