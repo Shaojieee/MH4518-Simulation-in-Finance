@@ -38,7 +38,7 @@ payoff_quarter <- function(aapl, amzn, googl, quarter){
   amzn_initial = 138.23
   googl_initial = 117.21
   
-  if (Reduce('|', aapl<=aapl_inital)|Reduce('|', amzn<=amzn_initial)|Reduce('|', googl<=googl_initial)){
+  if (Reduce('|', tail(aapl,n=1)<=aapl_inital)|Reduce('|', tail(amzn,n=1)<=amzn_initial)|Reduce('|', tail(googl,n=1)<=googl_initial)){
     return (0)
   }else if (quarter==2){
     return (1000*1.05)
