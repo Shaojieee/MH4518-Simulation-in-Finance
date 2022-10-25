@@ -1,5 +1,4 @@
 source('./payoff_function.r')
-install.packages("lubridate")
 library(lubridate)
 
 Visualize<-function(S){
@@ -92,20 +91,20 @@ while(cur_date<=end_date){
   v_hat = mean(aapl_ln_returns)
   sigma_hat = calculate_sigma_hat(aapl_ln_returns)
   if (any(aapl$Date==as.Date(cur_date))){
-    simulated_aapl = SimGBMexact(num_sim, aapl[aapl$Date==as.Date(cur_date), 'Close.Last'], v, sigma, 1, num_weekdays)
+    simulated_aapl = SimGBMexact(num_sim, aapl[aapl$Date==as.Date(cur_date), 'Close.Last'], v_hat, sigma_hat, 1, num_weekdays)
     # Visualize(simulated_aapl)
-    }else{
-      num_weekdays = num_weekdays - 1
-      cur_date = cur_date + days(1)
-      next
-    }
+  }else{
+    num_weekdays = num_weekdays - 1
+    cur_date = cur_date + days(1)
+    next
+  }
   
   amzn = extract_data('./data/24-10-2022/amzn.csv', historical_start, cur_date)
   amzn_ln_returns = calculate_ln_returns(amzn)
   v_hat = mean(amzn_ln_returns)
   sigma_hat = calculate_sigma_hat(amzn_ln_returns)
   if (any(amzn$Date==as.Date(cur_date))){
-    simulated_amzn = SimGBMexact(num_sim, amzn[amzn$Date==as.Date(cur_date), 'Close.Last'], v, sigma, 1, num_weekdays)
+    simulated_amzn = SimGBMexact(num_sim, amzn[amzn$Date==as.Date(cur_date), 'Close.Last'], v_hat, sigma_hat, 1, num_weekdays)
     # Visualize(simulated_amzn)
   }else{
     num_weekdays = num_weekdays - 1
@@ -114,7 +113,7 @@ while(cur_date<=end_date){
   }
   
   payoff = c()
-  for (i in 1:1000){
+  for (i in 1:num_sim){
     payoff = append(payoff, payoff_maturity(simulated_aapl[i,], simulated_amzn[i,], simulated_googl[i,]))
   }
   
@@ -132,3 +131,4 @@ predicted_option_price
 dev.new(width = 20, height = 5, unit = "cm")
 plot(predicted_option_price, type='l')
 expected_payoff
+
