@@ -96,8 +96,6 @@ while(cur_date<=end_date){
   
   stock_prices = as.matrix(stock_prices)
   stock_prices<-cbind(as.numeric(as.vector(stock_prices[,2])),as.numeric(as.vector(stock_prices[,3])),as.numeric(as.vector(stock_prices[,4])))
-  no = nrow(stock_prices)
-  
   
   v = apply(ln_returns, 2, mean)
   sigma = cov(ln_returns)
