@@ -1,5 +1,4 @@
 source('./payoff_function.r')
-install.packages("lubridate")
 library(lubridate)
 
 calculate_ln_returns <- function(data){
@@ -17,12 +16,13 @@ extract_data<-function(path, start_date, end_date){
   return (data)
 }
 
-Visualize<-function(S){
+Visualize<-function(S, title){
   # endindex=ncol(S)
   minS=min(S);maxS=max(S) # the y-limits of the plot
   noS<-nrow(S)
   cl<-rainbow(noS) # vector of rainbow colors
-  plot(S[1,],type="l",ylim=c(minS,maxS),col=cl[1])
+  plot(S[1,],type="l",ylim=c(minS,maxS),col=cl[1], main = title, 
+       ylab="Price")
   if(noS>1){
     for(i in 2:noS){
       lines(S[i,],col=cl[i])
@@ -35,7 +35,6 @@ r= 0.04716 # Obtained from http://www.worldgovernmentbonds.com/country/united-st
 start_date = as.Date('2022-08-19')
 end_date = as.Date('2022-10-23')
 maturity_date = as.Date('2023-08-22')
-num_sim = 10000
 cur_date = start_date
 historical_start = cur_date-years(1)
 
@@ -76,7 +75,7 @@ SimMultiGBMexact<-function(S0,v,Sigma,Deltat,T){ #simulate three assets' paths (
 }
 
 # S1: apple, S2: google, S3: amazon
-Nsim=10;T=1;dt=1/252
+Nsim=100;T=1;dt=1/252
 m=T/dt
 S0=AGA_prices[n0, ]
 S0 = as.numeric(S0)
@@ -91,6 +90,32 @@ for(i in 1:Nsim){
   S3[i,]=S[3,]
 }
 
+par(mfrow=c(3,1))
+
 HistS1<-matrix(rep(AGA_prices[,1],Nsim),ncol=n0,byrow=T)
 wholeS1<-cbind(HistS1,S1)
-Visualize(wholeS1)
+Visualize(wholeS1, "Apple Stock")
+
+HistS2<-matrix(rep(AGA_prices[,2],Nsim),ncol=n0,byrow=T)
+wholeS2<-cbind(HistS2,S2)
+Visualize(wholeS2, "Google Stock")
+
+HistS3<-matrix(rep(AGA_prices[,3],Nsim),ncol=n0,byrow=T)
+wholeS3<-cbind(HistS3,S3)
+Visualize(wholeS3, "Amazon Stock")
+
+HistS3
+wholeS3
+wholeS3[100,]
+AGA_prices
+payoff_maturity(wholeS3)
+amzn$Close.Last
+firstS3Path = wholeS3[1,][253:506]
+
+payoff = c()
+for(i in 1:Nsim){
+  payoff[i] = payoff_maturity(wholeS1[i,][253:506], 
+                              wholeS3[i,][253:506], 
+                              wholeS2[i,][253:506])
+}
+mean(payoff)
