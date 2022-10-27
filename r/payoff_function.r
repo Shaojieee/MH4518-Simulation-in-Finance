@@ -33,12 +33,13 @@ payoff_maturity <- function(aapl, amzn, googl){
   
 }
 
+# TODO: The payoff once if it falls below initial needs to be changed. I think it should be converted to worst performing stocks
 payoff_quarter <- function(aapl, amzn, googl, quarter){
   aapl_initial = 171.52
   amzn_initial = 138.23
   googl_initial = 117.21
   
-  if (Reduce('|', tail(aapl,n=1)<=aapl_inital)|Reduce('|', tail(amzn,n=1)<=amzn_initial)|Reduce('|', tail(googl,n=1)<=googl_initial)){
+  if (Reduce('|', tail(aapl,n=1)<=aapl_initial)|Reduce('|', tail(amzn,n=1)<=amzn_initial)|Reduce('|', tail(googl,n=1)<=googl_initial)){
     return (0)
   }else if (quarter==2){
     return (1000*1.05)
@@ -47,3 +48,4 @@ payoff_quarter <- function(aapl, amzn, googl, quarter){
   }
   return (0)
 }
+
