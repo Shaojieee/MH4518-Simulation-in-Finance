@@ -1,4 +1,5 @@
-def payoff_maturity(aapl,amzn,googl):
+
+def maturity_payoff(aapl,amzn,googl):
     aapl_barrier = 85.760
     amzn_barrier = 69.115
     googl_barrier = 58.605
@@ -40,7 +41,7 @@ def payoff_maturity(aapl,amzn,googl):
         return 1000*1.1
 
 
-def payoff_quarterly(aapl,amzn,googl,quarter):
+def quarterly_payoff(aapl,amzn,googl,quarter):
     aapl_initial = 171.52
     amzn_initial = 138.23
     googl_initial = 117.21
