@@ -39,13 +39,16 @@ expected_payoff_maturity = []
 while date_to_predict<=end_date:
     
     if date_to_predict in holidays or date_to_predict.weekday()==5 or date_to_predict.weekday()==6:
+        date_to_predict+=relativedelta(days=+1)
+        trading_days_to_simulate-=1
+        hist_end+=relativedelta(days=+1)
         continue
 
     hist_start = hist_end - timedelta(days=365)
 
-    aapl = extract_data('./data/24-10-2022/aapl.csv',hist_start,hist_end).rename(columns={'Close/Last':'AAPL'})
-    amzn = extract_data('./data/24-10-2022/amzn.csv',hist_start,hist_end).rename(columns={'Close/Last':'AMZN'})
-    googl = extract_data('./data/24-10-2022/googl.csv',hist_start,hist_end).rename(columns={'Close/Last':'GOOGL'})
+    aapl = extract_data('../data/24-10-2022/aapl.csv',hist_start,hist_end).rename(columns={'Close/Last':'AAPL'})
+    amzn = extract_data('../data/24-10-2022/amzn.csv',hist_start,hist_end).rename(columns={'Close/Last':'AMZN'})
+    googl = extract_data('../data/24-10-2022/googl.csv',hist_start,hist_end).rename(columns={'Close/Last':'GOOGL'})
     temp_df = aapl.merge(amzn,on=['Date'])
     AAG = temp_df.merge(googl,on=['Date'])
     n0 = len(AAG)
@@ -105,7 +108,8 @@ while date_to_predict<=end_date:
     option_price = np.exp(-r*(trading_days_to_simulate/total_trading_days))*cur_expected_payoff
     predicted_option_price.append(option_price)
 
-    date_to_predict = date_to_predict + relativedelta(days=+1)
+    date_to_predict+=relativedelta(days=+1)
+    hist_end+=relativedelta(days=+1)
     trading_days_to_simulate-=1
 
 print("Variance of expected payoff: "+str(np.var(expected_payoff_maturity)))
