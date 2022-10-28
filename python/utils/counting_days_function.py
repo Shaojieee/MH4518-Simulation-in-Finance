@@ -34,7 +34,8 @@ def days(latest_price_date):
             q3 = q3 +relativedelta(days=+1)
     q3_to_maturity = np.busday_count(q3.strftime("%Y-%m-%d"),(maturity_date+relativedelta(days=+1)).strftime("%Y-%m-%d"),weekmask=weekmask,holidays=holidays)
 
-    cur_date = datetime.strptime(before_start_date.strftime('%m/%d/%Y'),'%m/%d/%Y')
-    end_date = datetime.strptime(end_date.strftime('%m/%d/%Y'),'%m/%d/%Y')
+    hist_end = datetime.strptime(before_start_date.strftime('%Y/%m/%d'),'%Y/%m/%d')
+    date_to_predict = start_date
+    end_date = datetime.strptime(end_date.strftime('%Y/%m/%d'),'%Y/%m/%d')
 
-    return cur_date,end_date,q2_to_maturity,q3_to_maturity,total_trading_days
+    return date_to_predict,hist_end,end_date,q2_to_maturity,q3_to_maturity,q2,q3,total_trading_days,holidays

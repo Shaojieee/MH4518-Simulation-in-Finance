@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from utils.counting_days_function import days
 from utils.extract_data_function import extract_data
 from utils.payoff_function import maturity_payoff,quarterly_payoff
@@ -25,20 +25,20 @@ import matplotlib.pyplot as plt
 #     # print(S)
 #     return S
 
-cur_date,end_date,q2_to_maturity,q3_to_maturity,total_trading_days = days(latest_price_date='2022-10-24')
+date_to_predict,hist_end,end_date,q2_to_maturity,q3_to_maturity,q2,q3,total_trading_days,holidays = days(latest_price_date='2022-10-24')
 
-trading_days_to_predict = total_trading_days
+trading_days_to_simulate = total_trading_days
 
 predicted_option_price = []
 expected_payoff_maturity = []
 
-while cur_date<=end_date:
+while date_to_predict<=end_date:
 
-    hist_start = cur_date - timedelta(days=365)
+    hist_start = hist_end - timedelta(days=365)
 
-    aapl = extract_data('./data/24-10-2022/aapl.csv',hist_start,cur_date).rename(columns={'Close/Last':'AAPL'})
-    amzn = extract_data('./data/24-10-2022/amzn.csv',hist_start,cur_date).rename(columns={'Close/Last':'AMZN'})
-    googl = extract_data('./data/24-10-2022/googl.csv',hist_start,cur_date).rename(columns={'Close/Last':'GOOGL'})
+    aapl = extract_data('./data/24-10-2022/aapl.csv',hist_start,hist_end).rename(columns={'Close/Last':'AAPL'})
+    amzn = extract_data('./data/24-10-2022/amzn.csv',hist_start,hist_end).rename(columns={'Close/Last':'AMZN'})
+    googl = extract_data('./data/24-10-2022/googl.csv',hist_start,hist_end).rename(columns={'Close/Last':'GOOGL'})
     temp_df = aapl.merge(amzn,on=['Date'])
     AAG = temp_df.merge(googl,on=['Date'])
     n0 = len(AAG)
@@ -48,12 +48,11 @@ while cur_date<=end_date:
 
     v = np.mean(AAGlogreturns,axis=0)
     sigma = np.cov(AAGlogreturns,rowvar=False)
-    Nsim=100000
-    T=trading_days_to_predict
+    Nsim=5000
+    T=trading_days_to_simulate
     dt=1
     m=int(T/dt)
     r=0.04716
-
 
     S0=AAGprices[0,:]
     S1=np.zeros((Nsim,m+1))
@@ -92,11 +91,11 @@ while cur_date<=end_date:
 
     #TODO Apply regression to find the coefficient for each payoff
     # option_price = np.exp(-r*(trading_days_to_predict/total_trading_days))*cur_expected_payoff*w_1 + np.exp(-r/2)*np.mean(payoff_q2)*w_2 + np.exp(-r*3/4)*np.mean(payoff_q3)*w_3
-    option_price = np.exp(-r*(trading_days_to_predict/total_trading_days))*cur_expected_payoff
+    option_price = np.exp(-r*(trading_days_to_simulate/total_trading_days))*cur_expected_payoff
     predicted_option_price.append(option_price)
 
-    cur_date = cur_date + relativedelta(days=+1)
-    trading_days_to_predict-=1
+    date_to_predict = date_to_predict + relativedelta(days=+1)
+    trading_days_to_simulate-=1
 
 print("Variance of expected payoff: "+str(np.var(expected_payoff_maturity)))
 
