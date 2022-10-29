@@ -112,7 +112,7 @@ while date_to_predict<=end_date:
     hist_end+=relativedelta(days=+1)
     trading_days_to_simulate-=1
 
-print("Variance of expected payoff: "+str(np.var(expected_payoff_maturity)))
+print(f'Variance of expected payoff: {np.var(expected_payoff_maturity)} for {Nsim} Simulations.')
 plt_1 = plt.figure(figsize=(30,10))
 plt.plot(predicted_option_price)
 
