@@ -11,4 +11,5 @@ def extract_data(path,start_date,end_date):
     data = data.drop(columns=['Volume','Open','High','Low'])
     data = data[data['Date']>=start_date]
     data= data[data['Date']<=end_date]
+    data = data.sort_values(by='Date', ascending=False).reset_index(drop=True)
     return data
