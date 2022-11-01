@@ -66,45 +66,6 @@ def discounted_quarterly_payoff(next_q_payoff, q_to_next_q, interest_rate):
     return discounted_q_payoff
 
 
-# def quarterly_payoff(aapl, amzn, googl, quarter):
-#     barrier_effect = False
-#
-#     if min(aapl) <= aapl_barrier or min(amzn) <= amzn_barrier or min(googl) <= googl_barrier:
-#         aapl_percent = aapl[-1] / aapl_initial
-#         amzn_percent = amzn[-1] / amzn_initial
-#         googl_percent = googl[-1] / google_initial
-#         barrier_effect = True
-#
-#         # Checking for worse performing stocks
-#         if aapl_percent < amzn_percent and aapl_percent < googl_percent:
-#             lowest_stock = 'aapl'
-#             lowest_percent = aapl_percent
-#             lowest_price = aapl[-1]
-#             conversion_ratio = 5.8302
-#
-#         elif amzn_percent < googl_percent and amzn_percent < aapl_percent:
-#             lowest_stock = 'amzn'
-#             lowest_percent = amzn_percent
-#             lowest_price = amzn[-1]
-#             conversion_ratio = 7.2343
-#         else:
-#             lowest_stock = 'googl'
-#             lowest_percent = googl_percent
-#             lowest_price = googl[-1]
-#             conversion_ratio = 8.5317
-#
-#     if quarter == 2:
-#         if barrier_effect: # barrier effect has occurred
-#             return lowest_price * conversion_ratio + 1000 * 0.05
-#         else:  # no barrier effect, return coupon payment
-#             return 1000 * 1.05
-#     elif quarter == 3:
-#         if barrier_effect:
-#             return lowest_price * conversion_ratio + 1000 * 0.075
-#         else:
-#             return 1000 * 1.075
-#     return 0
-
 def quarterly_payoff(aapl,amzn,googl,quarter):
     aapl_initial = 171.52
     amzn_initial = 138.23

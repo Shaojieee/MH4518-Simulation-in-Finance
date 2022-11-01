@@ -15,6 +15,8 @@ def evaluate_option_price(predicted, actual, experiment_details):
 
     experiment_details['MSE'] = mse
     experiment_details['MAE'] = mae
+    variance_reduction = experiment_details['variance_reduction']
+    Nsim = experiment_details['Nsim']
 
     folder = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     Path(f'../results/{folder}').mkdir(parents=True, exist_ok=True)
@@ -25,4 +27,4 @@ def evaluate_option_price(predicted, actual, experiment_details):
     plt.plot(predicted, label='Predicted', color='red')
     plt.plot(actual, label='Actual', color='blue')
     plt.legend(loc='upper left')
-    plt.savefig(f'../results/{folder}/results.png')
+    plt.savefig(f'../results/{folder}/results_{variance_reduction}_{Nsim}.png')
