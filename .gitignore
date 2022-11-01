@@ -40,3 +40,6 @@ vignettes/*.pdf
 
 #pycache
 __pycache__
+
+# Pycharm Metadata
+.idea
