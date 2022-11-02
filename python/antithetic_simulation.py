@@ -29,6 +29,7 @@ aapl_initial = 171.52
 amzn_initial = 138.23
 google_initial = 117.21
 
+#TODO Not working too (Based on PCS notebook implementation)
 # def EMS(SimPaths,Deltat,r):
 #     Nsim,m = SimPaths.shape
 #     m-=1
@@ -104,7 +105,7 @@ while date_to_predict <= end_date:
     sim_googl = []
     random.seed(4518)
 
-    for i in range(1, Nsim + 1):
+    for i in range(1, int(Nsim/2) + 1):
         S, Stilde = SimMultiGBMAV(S0, v, sigma, dt, T)
         sim_aapl.append(S[0])
         sim_aapl.append(Stilde[0])
@@ -113,9 +114,10 @@ while date_to_predict <= end_date:
         sim_googl.append(S[2])
         sim_googl.append(Stilde[2])
     
-    sim_aapl = EMSCorrection(sim_aapl,Nsim,r,dt,T)
-    sim_amzn = EMSCorrection(sim_amzn,Nsim,r,dt,T)
-    sim_googl = EMSCorrection(sim_googl,Nsim,r,dt,T)
+    #TODO Not working need to fix
+    # sim_aapl = EMSCorrection(sim_aapl,Nsim,r,dt,T)
+    # sim_amzn = EMSCorrection(sim_amzn,Nsim,r,dt,T)
+    # sim_googl = EMSCorrection(sim_googl,Nsim,r,dt,T)
 
     q2_index = total_trading_days - q2_to_maturity if total_trading_days - q2_to_maturity>=0 else None
     q3_index = total_trading_days - q3_to_maturity if total_trading_days - q3_to_maturity>=0 else None
