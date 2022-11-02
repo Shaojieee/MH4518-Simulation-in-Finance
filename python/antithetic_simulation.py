@@ -4,6 +4,7 @@ from utils.extract_data_function import extract_data
 from utils.payoff_function import calculate_option_price
 from utils.simulation_function import SimMultiGBMAV
 from utils.evaluation import evaluate_option_price
+from utils.ems_correction import EMSCorrection
 import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
@@ -14,7 +15,7 @@ warnings.filterwarnings("ignore")
 
 
 experiment_details = {
-    'Nsim': 10000,
+    'Nsim': 250,
     'latest_price_date': '2022-10-24',
     'variance_reduction': 'AV',
     'GBM': 'multivariate',
@@ -76,9 +77,9 @@ while date_to_predict <= end_date:
 
     hist_start = hist_end - timedelta(days=365)
 
-    aapl = extract_data('../data/24-10-2022/aapl.csv', hist_start, hist_end).rename(columns={'Close/Last': 'AAPL'})
-    amzn = extract_data('../data/24-10-2022/amzn.csv', hist_start, hist_end).rename(columns={'Close/Last': 'AMZN'})
-    googl = extract_data('../data/24-10-2022/googl.csv', hist_start, hist_end).rename(columns={'Close/Last': 'GOOGL'})
+    aapl = extract_data('./data/24-10-2022/aapl.csv', hist_start, hist_end).rename(columns={'Close/Last': 'AAPL'})
+    amzn = extract_data('./data/24-10-2022/amzn.csv', hist_start, hist_end).rename(columns={'Close/Last': 'AMZN'})
+    googl = extract_data('./data/24-10-2022/googl.csv', hist_start, hist_end).rename(columns={'Close/Last': 'GOOGL'})
     temp_df = aapl.merge(amzn, on=['Date'])
     AAG = temp_df.merge(googl, on=['Date'])
     n0 = len(AAG)
@@ -111,6 +112,10 @@ while date_to_predict <= end_date:
         sim_amzn.append(Stilde[1])
         sim_googl.append(S[2])
         sim_googl.append(Stilde[2])
+    
+    sim_aapl = EMSCorrection(sim_aapl,Nsim,r,dt,T)
+    sim_amzn = EMSCorrection(sim_amzn,Nsim,r,dt,T)
+    sim_googl = EMSCorrection(sim_googl,Nsim,r,dt,T)
 
     q2_index = total_trading_days - q2_to_maturity if total_trading_days - q2_to_maturity>=0 else None
     q3_index = total_trading_days - q3_to_maturity if total_trading_days - q3_to_maturity>=0 else None
@@ -136,10 +141,6 @@ while date_to_predict <= end_date:
     predicted_option_price.append({'date':date_to_predict, 'predicted': option_price})
     print(f"Derivative Price for {date_to_predict}")
     print(option_price)
-
-    # sim_aapl = EMS(sim_aapl,dt,r)
-    # # sim_amzn = EMS(sim_amzn,dt,r)
-    # sim_googl = EMS(sim_googl,dt,r)
 
     # cur_expected_payoff = np.mean(payoff_maturity)
     # expected_payoff_maturity.append(cur_expected_payoff)
