@@ -2,6 +2,7 @@ from ast import Del
 from re import X
 import numpy as np
 import math
+from utils.payoff_function import maturity_payoff, calculate_option_price
 
 
 def SimMultiGBM(S0, v, sigma, Deltat, T):
@@ -32,29 +33,33 @@ def SimMultiGBMAV(S0, v, sigma, Deltat, T):
     A = np.linalg.cholesky(sigma)
 
     for i in range(1, m + 1):
-        S[:, i:i + 1] = np.exp(np.log(S[:, i - 1:i]) + np.dot(A*Deltat, Z[:, i - 1:i]) + (v * Deltat).reshape(3,1))
-        Stilde[:, i:i + 1] = np.exp(np.log(Stilde[:, i - 1:i]) + np.dot(A*Deltat, -Z[:, i - 1:i]) + (v * Deltat).reshape(3,1))
+        S[:, i:i + 1] = np.exp(np.log(S[:, i - 1:i]) + np.dot(A*np.sqrt(Deltat), Z[:, i - 1:i]) + (v * Deltat).reshape(3,1))
+        Stilde[:, i:i + 1] = np.exp(np.log(Stilde[:, i - 1:i]) + np.dot(A*np.sqrt(Deltat), -Z[:, i - 1:i]) + (v * Deltat).reshape(3,1))
 
     return S, Stilde
 
-def SimMultiGBMCV(S0,v,sigma,Deltat,T):
-    m = int(T/Deltat)
-    p = len(S0)
-    X = np.zeros((p,m+1))
-    X_CV = np.zeros((p,m+1))
-    X[:,0] = S0
-    X_CV[:,0] = S0
-    Y = np.random.multivariate_normal(mean=v * Deltat, cov=sigma * Deltat, size=(m, 1, 1))
-    Y = np.transpose(Y[:, 0, 0,:])
+# def SimMultiGBMCV(S0,v,sigma,N1,N2,r,Deltat,T,total_trading_days,q2_index,q3_index):
+#     m = int(T/Deltat)
+#     p = len(S0)
+#     S = np.zeros((p,m+1))
+#     S[:,0] = S0
 
-    for i in range(1, m + 1):
-        X[:, i:i + 1] = np.exp(np.log(X[:, i - 1:i]) + Y[:, i - 1:i])
+#     C = []
+#     for j in range(N1):
+#         Z = np.random.multivariate_normal(mean=v * Deltat, cov=sigma * Deltat, size=(m, 1, 1))
+#         Z = np.transpose(Z[:, 0, 0,:])
+
+#         for i in range(1, m + 1):
+#             S[:, i:i + 1] = np.exp(np.log(S[:, i - 1:i]) + Z[:, i - 1:i])
+        
+#         C.append(calculate_option_price(aapl=S[0],amzn=S[1],googl=S[2],T=T,total_trading_days=total_trading_days,r=r,q2_index=q2_index,q3_index=q3_index))
     
-    c_star_1 = -1*np.cov(X[0,1:],Y[0,:])[0][1]/np.var(Y[0,:])
-    c_star_2 = -1*np.cov(X[1,1:],Y[1,:])[0][1]/np.var(Y[1,:])
-    c_star_3 = -1*np.cov(X[2,1:],Y[2,:])[0][1]/np.var(Y[2,:])
-    c_star = np.array([c_star_1,c_star_2,c_star_3]).reshape(3,1)
-    for i in range (1, m + 1):
-        X_CV[:, i:i + 1] = X[:, i:i + 1] + c_star*(Y[:, i - 1:i] - (v*Deltat).reshape(3,1))
+    
+#     c_star_1 = -1*np.cov(X[0,1:],Y[0,:])[0][1]/np.var(Y[0,:])
+#     c_star_2 = -1*np.cov(X[1,1:],Y[1,:])[0][1]/np.var(Y[1,:])
+#     c_star_3 = -1*np.cov(X[2,1:],Y[2,:])[0][1]/np.var(Y[2,:])
+#     c_star = np.array([c_star_1,c_star_2,c_star_3]).reshape(3,1)
+#     for i in range (1, m + 1):
+#         X_CV[:, i:i + 1] = X[:, i:i + 1] + c_star*(Y[:, i - 1:i] - (v*Deltat).reshape(3,1))
 
-    return X_CV
+#     return X_CV
