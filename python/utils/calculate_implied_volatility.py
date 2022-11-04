@@ -23,9 +23,9 @@ def estimate_IV(C_mkt,S_t,K,r,T,sigma_hat_list,left,right,error):
         sigma_hat = sigma_hat_list[mid]
         d1 = 1/(sigma_hat*math.sqrt(T))*(math.log(S_t/K)+(r+sigma_hat**2/2)*T)
         d2 = d1 - sigma_hat*math.sqrt(T)
-        estimated_call_price = norm(d1)*S_t - norm(d2)*K*math.exp(-r*T)
+        estimated_call_price = norm.cdf(d1)*S_t - norm.cdf(d2)*K*math.exp(-r*T)
 
-        if math.abs(C_mkt-estimated_call_price)<error:
+        if abs(C_mkt-estimated_call_price)<error:
             return sigma_hat
         
         elif C_mkt-estimated_call_price>0:
