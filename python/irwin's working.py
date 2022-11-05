@@ -79,7 +79,7 @@ while date_to_predict <= end_date:
     random.seed(4518)
 
     for i in range(1, Nsim + 1):
-        S = SimMultiGBM(S0, v, sigma, dt, T)
+        S, Z = SimMultiGBM(S0, v, sigma, dt, T)
         # print("S Matrix")
         # print(S)
         # print("-------")

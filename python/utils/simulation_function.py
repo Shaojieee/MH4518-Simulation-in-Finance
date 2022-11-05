@@ -2,7 +2,6 @@ from ast import Del
 from re import X
 import numpy as np
 import math
-from utils.payoff_function import maturity_payoff, calculate_option_price
 
 
 def SimMultiGBM(S0, v, sigma, Deltat, T):
@@ -16,7 +15,7 @@ def SimMultiGBM(S0, v, sigma, Deltat, T):
     for i in range(1, m + 1):
         S[:, i:i + 1] = np.exp(np.log(S[:, i - 1:i]) + Z[:, i - 1:i])
 
-    return S
+    return S, Z
 
 
 def SimMultiGBMAV(S0, v, sigma, Deltat, T):
@@ -37,6 +36,49 @@ def SimMultiGBMAV(S0, v, sigma, Deltat, T):
         Stilde[:, i:i + 1] = np.exp(np.log(Stilde[:, i - 1:i]) + np.dot(A*np.sqrt(Deltat), -Z[:, i - 1:i]) + (v * Deltat).reshape(3,1))
 
     return S, Stilde
+
+
+def SimMultiGBMpmh(S0, v, sigma, Deltat, T, Z):
+    m = int(T/Deltat)
+    p = len(S0)
+    S = np.zeros((3*p, m+1))
+
+    h = []
+    S0_ph = []
+    S0_mh = []
+
+    for i in range(p):
+        h.append(0.01*S0[i])
+        S0_ph.append(S0[i] + h[i])
+        S0_mh.append(S0[i] - h[i])
+
+    Z_ = np.zeros((3 * p, m))
+
+    for i in range(p):
+        S[p*i][0] = S0_mh[i]
+        S[p*i+1][0] = S0[i]
+        S[p*i+2][0] = S0_ph[i]
+        Z_[3*i] = Z[i]
+        Z_[3*i+1] = Z[i]
+        Z_[3*i+2] = Z[i]
+    # print("Z_")
+    # print(Z_)
+    # print("-------")
+    # print("Z_ transpose")
+    # print(Z_)
+    # print("-------")
+    # print("Z")
+    # print(Z)
+    # print("-------")
+    # print("S")
+    # print(S)
+    # print("-------")
+    for i in range(1, m+1):
+        S[:, i:i + 1] = np.exp(np.log(S[:, i - 1:i]) + Z_[:, i - 1:i])
+
+    return S, h
+
+
 
 # def SimMultiGBMCV(S0,v,sigma,N1,N2,r,Deltat,T,total_trading_days,q2_index,q3_index):
 #     m = int(T/Deltat)

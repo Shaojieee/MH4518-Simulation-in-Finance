@@ -67,7 +67,7 @@ while date_to_predict<=end_date:
     random.seed(4518)
 
     for i in range(1,Nsim+1):
-        S=SimMultiGBM(S0,v,sigma,dt,T)
+        S, Z=SimMultiGBM(S0,v,sigma,dt,T)
         S1[i-1:i,:] = S[0:1,:]
         S2[i-1:i,:] = S[1:2,:]
         S3[i-1:i,:] = S[2:3,:]
