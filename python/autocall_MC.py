@@ -5,7 +5,7 @@ from utils.payoff_function import calculate_option_price
 from utils.simulation_function import SimMultiGBM
 from utils.ems_correction import EMSCorrection
 from utils.evaluation import evaluate_option_price
-from utils.delta import SimMultiGBMpmh
+from utils.simulation_function import SimMultiGBMpmh
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -65,6 +65,7 @@ pmh_indexes = [
     [1, 4, 6],
     [1, 4, 8]
 ]
+# S in line174 is framed as such: appl_initial-h, appl_initial, appl_initial+h, amzn_initial-h, amzn_initial, amzn_initial+h,...
 counter = 0
 
 while date_to_predict <= end_date:
@@ -119,7 +120,7 @@ while date_to_predict <= end_date:
         sim_aapl[i - 1] = S[0]
         sim_amzn[i - 1] = S[1]
         sim_googl[i - 1] = S[2]
-        Z_matrix.append(Z)
+        Z_matrix.append(Z) # store the Z used to simulate the GBM for derivative pricing
 
 
     # sim_aapl_star = EMSCorrection(sim_aapl, Nsim, r, dt, T)
