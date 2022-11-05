@@ -2,7 +2,6 @@ from ast import Del
 from re import X
 import numpy as np
 import math
-from utils.payoff_function import maturity_payoff, calculate_option_price
 
 
 def SimMultiGBM(S0, v, sigma, Deltat, T):
@@ -16,7 +15,7 @@ def SimMultiGBM(S0, v, sigma, Deltat, T):
     for i in range(1, m + 1):
         S[:, i:i + 1] = np.exp(np.log(S[:, i - 1:i]) + Z[:, i - 1:i])
 
-    return S
+    return S, Z
 
 
 def SimMultiGBMAV(S0, v, sigma, Deltat, T):

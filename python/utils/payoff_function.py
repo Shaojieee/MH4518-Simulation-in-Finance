@@ -9,18 +9,26 @@ google_initial = 117.21
 
 
 def calculate_option_price(aapl, amzn, googl, T, total_trading_days, r, q2_index=None, q3_index=None):
-
+    q2_autocall = False
+    q3_autocall = False
+    barrier_event = False
     if q2_index:
         if aapl[q2_index] > aapl_initial and amzn[q2_index] > amzn_initial and googl[q2_index] > google_initial:
             payoff_ = 1000*1.05
-            return np.exp(-r * (T-q2_index)/total_trading_days) * payoff_
+            q2_autocall = True
+            # return np.exp(-r * (q2_index)/total_trading_days) * payoff_
+            return np.exp(-r * (q2_index) / 252) * payoff_
 
     if q3_index:
         if aapl[q3_index] > aapl_initial and amzn[q3_index] > amzn_initial and googl[q3_index] > google_initial:
             payoff_ = 1000*1.075
-            return np.exp(-r * (T-q3_index)/total_trading_days) * payoff_
+            q3_autocall = True
+            # return np.exp(-r * (q3_index)/total_trading_days) * payoff_
+            return np.exp(-r * (q3_index) / 252) * payoff_
 
-    return np.exp(-r * T/total_trading_days) * maturity_payoff(aapl, amzn, googl)
+    # return np.exp(-r * T/total_trading_days) * maturity_payoff(aapl, amzn, googl)
+    maturity_payoff_ = maturity_payoff(aapl, amzn, googl)
+    return np.exp(-r * T / 252) * maturity_payoff_
 
 
 def maturity_payoff(aapl, amzn, googl):
