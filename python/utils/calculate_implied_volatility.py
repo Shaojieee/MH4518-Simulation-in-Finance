@@ -108,4 +108,4 @@ def calculate_cov_matrix(aapl_call_option_df,amzn_call_option_df,googl_call_opti
     V = np.diag([aapl_sigma_hat,amzn_sigma_hat,googl_sigma_hat])
     sigma = np.dot(np.dot(V,rho),V)
 
-    return sigma
+    return sigma,aapl_IV_list,amzn_IV_list,googl_IV_list
