@@ -17,24 +17,23 @@ def estimate_IV(C_mkt,S_t,K,r,T,sigma_hat_list,left,right,error):
 
     #Initialise a list of implied volatility with step size = error 
     #between min_sigma and max_sigma to conduct a binary search on to find the sigma
-    #that estimates call price to be within + - absolute error of the market price 
+    #that estimates call price to be within + - absolute error of the market price
     if right>=left:
         mid = (left + right)//2
         sigma_hat = sigma_hat_list[mid]
-        d1 = 1/(sigma_hat*math.sqrt(T))*(math.log(S_t/K)+(r+sigma_hat**2/2)*T)
+        d1 = 1/(sigma_hat*math.sqrt(T))*(math.log(S_t/K)+(r+(sigma_hat**2)/2)*T)
         d2 = d1 - sigma_hat*math.sqrt(T)
         estimated_call_price = norm.cdf(d1)*S_t - norm.cdf(d2)*K*math.exp(-r*T)
 
-        if abs(C_mkt-estimated_call_price)<error:
-            return sigma_hat
-        
-        elif C_mkt-estimated_call_price>0:
+        if C_mkt-estimated_call_price>0:
             # sigma_hat is too small and the better answer exist in the right subarray
-            return estimate_IV(C_mkt,S_t,K,r,T,sigma_hat_list,mid+1,right,error)
+            value = estimate_IV(C_mkt,S_t,K,r,T,sigma_hat_list,mid+1,right,error)
+            return value if value!=-1 else estimated_call_price
         
         else:
             # sigma_hat is too big and the better approximate exist in the left subarray
-            return estimate_IV(C_mkt,S_t,K,r,T,sigma_hat_list,left,mid-1,error)
+            value = estimate_IV(C_mkt,S_t,K,r,T,sigma_hat_list,left,mid-1,error)
+            return value if value!=-1 else estimated_call_price
     else:
         # unable to find a good enough estimate of implied volatility try changing range of sigma or precision
         return -1

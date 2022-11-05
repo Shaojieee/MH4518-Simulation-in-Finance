@@ -8,9 +8,9 @@ def EMSCorrection(S,Nsim,r,Deltat,T):
     S_Star[:,0] = S[:,0]
     Z = np.zeros((Nsim*2,m))
 
-    for i in range(1,m):
+    for i in range(1,m+1):
         Z[:,i-1] = S_Star[:,i-1] * (S[:,i]/S[:,i-1])
-        Z_0 = 1/(Nsim*2) * np.exp(-1*r*i*Deltat) * np.sum(Z[:,i-1])
+        Z_0 = 1/(Nsim*2) * np.exp(-1*r*(i*Deltat)/T) * np.sum(Z[:,i-1])
         S_Star[:,i] = S_Star[:,0] * Z[:,i-1]/Z_0
 
     return S_Star.tolist()
