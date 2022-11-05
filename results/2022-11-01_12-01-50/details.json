@@ -1,9 +1,0 @@
-{
-    "Nsim": 100,
-    "latest_price_date": "2022-10-24",
-    "variance_reduction": "AV",
-    "GBM": "multivariate",
-    "r": 0.045,
-    "MSE": 95.56417239680466,
-    "MAE": 8.960958594114443
-}
