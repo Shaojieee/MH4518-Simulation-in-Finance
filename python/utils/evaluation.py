@@ -3,9 +3,10 @@ import matplotlib.pyplot as plt
 import json
 import datetime
 from pathlib import Path
+import numpy as np
 
 
-def evaluate_option_price(predicted, actual, experiment_details):
+def evaluate_option_price(predicted, actual, expected_payoff_list, experiment_details):
 
     mse = mean_squared_error(actual, predicted)
     mae = mean_absolute_error(actual, predicted)
@@ -15,6 +16,7 @@ def evaluate_option_price(predicted, actual, experiment_details):
 
     experiment_details['MSE'] = mse
     experiment_details['MAE'] = mae
+    experiment_details['Expected Payoff Variance'] = np.var(expected_payoff_list)
     variance_reduction = experiment_details['variance_reduction']
     Nsim = experiment_details['Nsim']
 
