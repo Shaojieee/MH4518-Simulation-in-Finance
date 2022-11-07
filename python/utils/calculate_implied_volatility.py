@@ -111,7 +111,7 @@ def cov_estimated_IV(aapl_call_df,amzn_call_df,googl_call_df,r,alternative_optio
     V = np.diag([aapl_sigma_hat,amzn_sigma_hat,googl_sigma_hat])
     sigma = np.dot(np.dot(V,rho),V)
 
-    return sigma,aapl_IV_list,amzn_IV_list,googl_IV_list
+    return sigma
 
 def cov_actual_IV(aapl_IV_df,amzn_IV_df,googl_IV_df,date_to_predict,AAGlogreturns):
 
