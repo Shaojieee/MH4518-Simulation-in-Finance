@@ -1,0 +1,17 @@
+{
+    "Nsim": 1000,
+    "latest_price_date": "2022-11-04",
+    "variance_reduction": true,
+    "GBM": "multivariate",
+    "r": 0.0326,
+    "estimated_IV": false,
+    "actual_IV": true,
+    "min_sigma": 0,
+    "max_sigma": 5,
+    "step": 1e-06,
+    "EMS": true,
+    "interpolate_r": false,
+    "MSE": 18.391558792580497,
+    "MAE": 3.355242083081037,
+    "Expected Payoff Variance": 2124.264651126577
+}

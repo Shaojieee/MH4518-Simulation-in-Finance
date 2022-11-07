@@ -125,6 +125,8 @@ def cov_actual_IV(aapl_IV_df,amzn_IV_df,googl_IV_df,date_to_predict,AAGlogreturn
         aapl_IV_df = aapl_IV_df[aapl_IV_df['Date']==date_to_predict].values.tolist()
         aapl_IV_list = []
         for row in aapl_IV_df:
+            if math.isnan(row[-1]):
+                continue
             aapl_IV_list.append(row[-1])
         aapl_sigma_hat = np.mean(aapl_IV_list)
     
@@ -139,6 +141,8 @@ def cov_actual_IV(aapl_IV_df,amzn_IV_df,googl_IV_df,date_to_predict,AAGlogreturn
         amzn_IV_df = amzn_IV_df[amzn_IV_df['Date']==date_to_predict].values.tolist()
         amzn_IV_list = []
         for row in amzn_IV_df:
+            if math.isnan(row[-1]):
+                continue
             amzn_IV_list.append(row[-1])
         amzn_sigma_hat = np.mean(amzn_IV_list)
     
@@ -153,6 +157,8 @@ def cov_actual_IV(aapl_IV_df,amzn_IV_df,googl_IV_df,date_to_predict,AAGlogreturn
         googl_IV_df = googl_IV_df[googl_IV_df['Date']==date_to_predict].values.tolist()
         googl_IV_list = []
         for row in googl_IV_df:
+            if math.isnan(row[-1]):
+                continue
             googl_IV_list.append(row[-1])
         googl_sigma_hat = np.mean(googl_IV_list)
     
