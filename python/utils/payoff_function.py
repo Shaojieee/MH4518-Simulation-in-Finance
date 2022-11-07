@@ -9,7 +9,7 @@ amzn_initial = 138.23
 google_initial = 117.21
 
 
-def calculate_option_price(aapl, amzn, googl, T, total_trading_days, q2, q3, maturity, cur, q2_index, q3_index, interpolate_r):
+def calculate_option_price(aapl, amzn, googl, T, total_trading_days, q2, q3, maturity, cur, q2_index, q3_index, interpolate_r, r):
     q2_autocall = False
     q3_autocall = False
     barrier_event = False
@@ -18,21 +18,24 @@ def calculate_option_price(aapl, amzn, googl, T, total_trading_days, q2, q3, mat
         if aapl[q2_index] > aapl_initial and amzn[q2_index] > amzn_initial and googl[q2_index] > google_initial:
             payoff_ = 1000*1.05
             q2_autocall = True
-            num_days = (q2 - cur).days
-            r = calculate_r(num_days, cur, interpolate_r)
+            if r==None:
+                num_days = (q2 - cur).days
+                r = calculate_r(num_days, cur, interpolate_r)
             return np.exp(-r * (q2_index) / total_trading_days) * payoff_,payoff_, r
 
     if q3_index:
         if aapl[q3_index] > aapl_initial and amzn[q3_index] > amzn_initial and googl[q3_index] > google_initial:
             payoff_ = 1000*1.075
             q3_autocall = True
-            num_days = (q3 - cur).days
-            r = calculate_r(num_days, cur, interpolate_r)
+            if r==None:
+                num_days = (q3 - cur).days
+                r = calculate_r(num_days, cur, interpolate_r)
             return np.exp(-r * (q3_index) / total_trading_days) * payoff_,payoff_, r
 
     maturity_payoff_ = maturity_payoff(aapl, amzn, googl)
-    num_days = (maturity - cur).days
-    r = calculate_r(num_days, cur, interpolate_r)
+    if r==None:
+        num_days = (maturity - cur).days
+        r = calculate_r(num_days, cur, interpolate_r)
     return np.exp(-r * T / total_trading_days) * maturity_payoff_,maturity_payoff_, r
 
 
