@@ -43,9 +43,9 @@ def estimate_call_IV(C_mkt,S_t,K,r,T,sigma_hat_list,left,right):
 
 def cov_estimated_IV(aapl_call_df,amzn_call_df,googl_call_df,r,alternative_option_ttm,sigma_hat_list,left,right,date_to_predict,AAGlogreturns):
 
-    aapl_current_price = extract_current_price('../data/24-10-2022/aapl.csv',date_to_predict)
-    amzn_current_price = extract_current_price('../data/24-10-2022/amzn.csv',date_to_predict)
-    googl_current_price = extract_current_price('../data/24-10-2022/googl.csv',date_to_predict)
+    aapl_current_price = extract_current_price('../data/04-11-2022/aapl_04_11_2022.csv',date_to_predict)
+    amzn_current_price = extract_current_price('../data/04-11-2022/amzn_04_11_2022.csv',date_to_predict)
+    googl_current_price = extract_current_price('../data/04-11-2022/googl_04_11_2022.csv',date_to_predict)
 
     if aapl_call_df[aapl_call_df['Date']==date_to_predict]['Closing Price'].isnull().all():
         #No option traded on this day, unable to backcalculate the IV for this day --> Use historical vol
