@@ -40,7 +40,7 @@ def calculate_option_price(aapl, amzn, googl, T, total_trading_days, q2, q3, mat
 
 
 def calculate_r(num_days, cur, interpolate_r):
-    rates = pd.read_csv('../data/USTREASURY-YIELD_01_11_22.csv')
+    rates = pd.read_csv('../data/USTREASURY-YIELD_04_11_22.csv')
     rates['Date'] = pd.to_datetime(rates['Date'], format='%Y-%m-%d')
     rates = rates.set_index('Date')
     rates = rates.asfreq('D')
