@@ -35,13 +35,14 @@ def SimMultiGBMAV(S0, v, sigma, Deltat, T):
         S[:, i:i + 1] = np.exp(np.log(S[:, i - 1:i]) + np.dot(A*np.sqrt(Deltat), Z[:, i - 1:i]) + (v * Deltat).reshape(3,1))
         Stilde[:, i:i + 1] = np.exp(np.log(Stilde[:, i - 1:i]) + np.dot(A*np.sqrt(Deltat), -Z[:, i - 1:i]) + (v * Deltat).reshape(3,1))
 
-    return S, Stilde
+    return S, Stilde, Z
 
 
-def SimMultiGBMpmh(S0, v, sigma, Deltat, T, Z):
-    m = int(T/Deltat)
+def SimMultiGBMpmh(S0, v, sigma, Deltat, T, Z, variance_reduction):
+    m = int(T / Deltat)
     p = len(S0)
     S = np.zeros((3*p, m+1))
+    Stilde = np.zeros((3*p, m+1))
 
     h = []
     S0_ph = []
@@ -58,6 +59,9 @@ def SimMultiGBMpmh(S0, v, sigma, Deltat, T, Z):
         S[p*i][0] = S0_mh[i]
         S[p*i+1][0] = S0[i]
         S[p*i+2][0] = S0_ph[i]
+        Stilde[p*i][0] = S0_mh[i]
+        Stilde[p*i+1][0] = S0[i]
+        Stilde[p*i+2][0] = S0_ph[i]
         Z_[3*i] = Z[i]
         Z_[3*i+1] = Z[i]
         Z_[3*i+2] = Z[i]
@@ -73,10 +77,35 @@ def SimMultiGBMpmh(S0, v, sigma, Deltat, T, Z):
     # print("S")
     # print(S)
     # print("-------")
-    for i in range(1, m+1):
-        S[:, i:i + 1] = np.exp(np.log(S[:, i - 1:i]) + Z_[:, i - 1:i])
-
-    return S, h
+    if not variance_reduction:
+        for i in range(1, m+1):
+            S[:, i:i + 1] = np.exp(np.log(S[:, i - 1:i]) + Z_[:, i - 1:i])
+        return S
+    else:
+        A = np.linalg.cholesky(sigma)
+        v_dt = v * Deltat
+        v_ = np.zeros((9,1))
+        for i in range(p):
+            v_[3 * i] = v_dt[i]
+            v_[3 * i + 1] = v_dt[i]
+            v_[3 * i + 2] = v_dt[i]
+        for i in range(1, m + 1):
+            Adt_Z = np.dot(A * np.sqrt(Deltat), Z[:, i - 1:i])
+            Adt_Z_ = np.zeros((9,1))
+            Adt_neg_Z = np.dot(A * np.sqrt(Deltat), -Z[:, i - 1:i])
+            Adt_neg_Z_ = np.zeros((9,1))
+            for j in range(p):
+                Adt_Z_[3*j] = Adt_Z[j]
+                Adt_Z_[3*j+1] = Adt_Z[j]
+                Adt_Z_[3*j+2] = Adt_Z[j]
+                Adt_neg_Z_[3*j] = Adt_neg_Z[j]
+                Adt_neg_Z_[3*j+1] = Adt_neg_Z[j]
+                Adt_neg_Z_[3*j+2] = Adt_neg_Z[j]
+            S[:, i:i + 1] = np.exp(
+                np.log(S[:, i - 1:i]) + Adt_Z_ + v_)
+            Stilde[:, i:i + 1] = np.exp(
+                np.log(Stilde[:, i - 1:i]) + Adt_neg_Z_ + v_)
+        return S, Stilde
 
 
 
