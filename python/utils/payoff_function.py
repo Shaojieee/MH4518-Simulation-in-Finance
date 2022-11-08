@@ -9,7 +9,7 @@ amzn_initial = 138.23
 google_initial = 117.21
 
 
-def calculate_option_price(aapl, amzn, googl, T, total_trading_days, q2, q3, maturity, cur, q2_index, q3_index, interpolate_r, r):
+def calculate_option_price(aapl, amzn, googl, T, total_trading_days, q2, q3, maturity, cur, q2_index, q3_index, interpolate_r, r, rates):
     q2_autocall = False
     q3_autocall = False
     barrier_event = False
@@ -20,7 +20,7 @@ def calculate_option_price(aapl, amzn, googl, T, total_trading_days, q2, q3, mat
             q2_autocall = True
             if r==None:
                 num_days = (q2 - cur).days
-                r = calculate_r(num_days, cur, interpolate_r)
+                r = calculate_r(num_days, cur, interpolate_r, rates)
             return np.exp(-r * (q2_index) / total_trading_days) * payoff_,payoff_, r
 
     if q3_index:
@@ -29,22 +29,17 @@ def calculate_option_price(aapl, amzn, googl, T, total_trading_days, q2, q3, mat
             q3_autocall = True
             if r==None:
                 num_days = (q3 - cur).days
-                r = calculate_r(num_days, cur, interpolate_r)
+                r = calculate_r(num_days, cur, interpolate_r, rates)
             return np.exp(-r * (q3_index) / total_trading_days) * payoff_,payoff_, r
 
     maturity_payoff_ = maturity_payoff(aapl, amzn, googl)
     if r==None:
         num_days = (maturity - cur).days
-        r = calculate_r(num_days, cur, interpolate_r)
+        r = calculate_r(num_days, cur, interpolate_r, rates)
     return np.exp(-r * T / total_trading_days) * maturity_payoff_,maturity_payoff_, r
 
 
-def calculate_r(num_days, cur, interpolate_r):
-    rates = pd.read_csv('../data/04-11-2022/USTREASURY-YIELD_04_11_22.csv')
-    rates['Date'] = pd.to_datetime(rates['Date'], format='%Y-%m-%d')
-    rates = rates.set_index('Date')
-    rates = rates.asfreq('D')
-    rates = rates.ffill()
+def calculate_r(num_days, cur, interpolate_r, rates):
 
     rates = rates.loc[cur.strftime('%Y-%m-%d'), ].to_dict()
 
@@ -70,7 +65,6 @@ def calculate_r(num_days, cur, interpolate_r):
         return (grad * num_days + x_intercept)/100.0
 
     return (rates['1 YR'])/100.0
-
 
 
 def maturity_payoff(aapl, amzn, googl):
@@ -111,38 +105,47 @@ def maturity_payoff(aapl, amzn, googl):
 def get_payoff_pmh(S0, sim_aapl_mh, sim_aapl, sim_aapl_ph,
                    sim_amzn_mh, sim_amzn, sim_amzn_ph, sim_googl_mh, 
                    sim_googl, sim_googl_ph, trading_days_to_simulate, total_trading_days,
-                   r, q2_index, q3_index):
+                   r, q2_index, q3_index, q2, q3, interpolate_r, h_prop, maturity, cur, rates):
     
-    aapl_h = 0.001 * S0[0]
-    amzn_h = 0.001 * S0[1]
-    googl_h = 0.001 * S0[2]
+    aapl_h = h_prop * S0[0]
+    amzn_h = h_prop * S0[1]
+    googl_h = h_prop * S0[2]
     
-    option_aapl_mh, _ = calculate_option_price(aapl=sim_aapl_mh, amzn=sim_amzn, googl=sim_googl, T=trading_days_to_simulate,
-                                               total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+    option_aapl_mh, _, _ = calculate_option_price(aapl=sim_aapl_mh, amzn=sim_amzn, googl=sim_googl, T=trading_days_to_simulate,
+                                               total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index,
+                                               q2=q2, q3=q3, interpolate_r=interpolate_r, maturity=maturity, cur=cur, rates=rates)
 
-    option_aapl, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl, T=trading_days_to_simulate,
-                                            total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+    option_aapl, _, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl, T=trading_days_to_simulate,
+                                            total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index,
+                                               q2=q2, q3=q3, interpolate_r=interpolate_r, maturity=maturity, cur=cur, rates=rates)
 
-    option_aapl_ph, _ = calculate_option_price(aapl=sim_aapl_ph, amzn=sim_amzn, googl=sim_googl, T=trading_days_to_simulate,
-                                               total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+    option_aapl_ph, _, _ = calculate_option_price(aapl=sim_aapl_ph, amzn=sim_amzn, googl=sim_googl, T=trading_days_to_simulate,
+                                               total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index,
+                                               q2=q2, q3=q3, interpolate_r=interpolate_r, maturity=maturity, cur=cur, rates=rates)
     
-    option_amzn_mh, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn_mh, googl=sim_googl, T=trading_days_to_simulate,
-                                               total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+    option_amzn_mh, _, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn_mh, googl=sim_googl, T=trading_days_to_simulate,
+                                               total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index,
+                                               q2=q2, q3=q3, interpolate_r=interpolate_r, maturity=maturity, cur=cur, rates=rates)
 
-    option_amzn, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl,
-                                            T=trading_days_to_simulate, total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+    option_amzn, _, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl,
+                                            T=trading_days_to_simulate, total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index,
+                                            q2=q2, q3=q3, interpolate_r=interpolate_r, maturity=maturity, cur=cur, rates=rates)
 
-    option_amzn_ph, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn_ph, googl=sim_googl, T=trading_days_to_simulate,
-                                               total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+    option_amzn_ph, _, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn_ph, googl=sim_googl, T=trading_days_to_simulate,
+                                               total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index,
+                                               q2=q2, q3=q3, interpolate_r=interpolate_r, maturity=maturity, cur=cur, rates=rates)
     
-    option_googl_mh, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl_mh, T=trading_days_to_simulate,
-                                                total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+    option_googl_mh, _, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl_mh, T=trading_days_to_simulate,
+                                                total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index,
+                                               q2=q2, q3=q3, interpolate_r=interpolate_r, maturity=maturity, cur=cur, rates=rates)
 
-    option_googl, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl,
-                                             T=trading_days_to_simulate, total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+    option_googl, _, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl,
+                                             T=trading_days_to_simulate, total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index,
+                                             q2=q2, q3=q3, interpolate_r=interpolate_r, maturity=maturity, cur=cur, rates=rates)
 
-    option_googl_ph, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl_ph, T=trading_days_to_simulate,
-                                                total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+    option_googl_ph, _, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl_ph, T=trading_days_to_simulate,
+                                                total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index,
+                                                q2=q2, q3=q3, interpolate_r=interpolate_r, maturity=maturity, cur=cur, rates=rates)
     
     delta_payoff_aapl_pmh = (option_aapl_ph - option_aapl_mh) / (2 * aapl_h)
     delta_payoff_amzn_pmh = (option_amzn_ph - option_aapl_mh) / (2 * amzn_h)
@@ -163,27 +166,7 @@ def get_payoff_pmh(S0, sim_aapl_mh, sim_aapl, sim_aapl_ph,
     gamma_payoff_pmh_.append(gamma_payoff_googl_pmh)
     
     return delta_payoff_pmh_, gamma_payoff_pmh_
-    
-def discounted_quarterly_payoff(next_q_payoff, q_to_next_q, interest_rate):
-    discounted_q_payoff = next_q_payoff * np.exp(-interest_rate * (q_to_next_q)/252)
-    # print("discounted q3 payoff")
-    # print(discounted_q3_payoff)
-    # print("-------")
-    return discounted_q_payoff
 
-
-def quarterly_payoff(aapl,amzn,googl,quarter):
-    aapl_initial = 171.52
-    amzn_initial = 138.23
-    googl_initial = 117.21
-
-    if aapl[-1]<aapl_initial or amzn[-1]<amzn_initial or googl[-1]<googl_initial:
-        return 0
-    elif quarter==2:
-        return 1000*1.05
-    elif quarter==3:
-        return 1000*1.075
-    return 0
 
 
 
