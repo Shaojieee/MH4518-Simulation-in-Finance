@@ -66,6 +66,62 @@ def maturity_payoff(aapl, amzn, googl):
         return 1000 * 1.1
 
 
+def get_payoff_pmh(S0, sim_aapl_mh, sim_aapl, sim_aapl_ph,
+                   sim_amzn_mh, sim_amzn, sim_amzn_ph, sim_googl_mh, 
+                   sim_googl, sim_googl_ph, trading_days_to_simulate, total_trading_days,
+                   r, q2_index, q3_index):
+    
+    aapl_h = 0.001 * S0[0]
+    amzn_h = 0.001 * S0[1]
+    googl_h = 0.001 * S0[2]
+    
+    option_aapl_mh, _ = calculate_option_price(aapl=sim_aapl_mh, amzn=sim_amzn, googl=sim_googl, T=trading_days_to_simulate,
+                                               total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+
+    option_aapl, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl, T=trading_days_to_simulate,
+                                            total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+
+    option_aapl_ph, _ = calculate_option_price(aapl=sim_aapl_ph, amzn=sim_amzn, googl=sim_googl, T=trading_days_to_simulate,
+                                               total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+    
+    option_amzn_mh, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn_mh, googl=sim_googl, T=trading_days_to_simulate,
+                                               total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+
+    option_amzn, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl,
+                                            T=trading_days_to_simulate, total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+
+    option_amzn_ph, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn_ph, googl=sim_googl, T=trading_days_to_simulate,
+                                               total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+    
+    option_googl_mh, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl_mh, T=trading_days_to_simulate,
+                                                total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+
+    option_googl, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl,
+                                             T=trading_days_to_simulate, total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+
+    option_googl_ph, _ = calculate_option_price(aapl=sim_aapl, amzn=sim_amzn, googl=sim_googl_ph, T=trading_days_to_simulate,
+                                                total_trading_days=total_trading_days, r=r, q2_index=q2_index, q3_index=q3_index)
+    
+    delta_payoff_aapl_pmh = (option_aapl_ph - option_aapl_mh) / (2 * aapl_h)
+    delta_payoff_amzn_pmh = (option_amzn_ph - option_aapl_mh) / (2 * amzn_h)
+    delta_payoff_googl_pmh = (option_googl_ph - option_aapl_mh) / (2 * googl_h)
+
+    gamma_payoff_aapl_pmh = (option_aapl_ph - 2*option_aapl + option_aapl_mh) / (aapl_h*aapl_h)
+    gamma_payoff_amzn_pmh = (option_amzn_ph - 2*option_amzn + option_amzn_mh) / (amzn_h*amzn_h)
+    gamma_payoff_googl_pmh = (option_googl_ph - 2*option_googl + option_googl_mh) / (googl_h*googl_h)
+    
+    delta_payoff_pmh_ = []
+    delta_payoff_pmh_.append(delta_payoff_aapl_pmh)
+    delta_payoff_pmh_.append(delta_payoff_amzn_pmh)
+    delta_payoff_pmh_.append(delta_payoff_googl_pmh)
+
+    gamma_payoff_pmh_ = []
+    gamma_payoff_pmh_.append(gamma_payoff_aapl_pmh)
+    gamma_payoff_pmh_.append(gamma_payoff_amzn_pmh)
+    gamma_payoff_pmh_.append(gamma_payoff_googl_pmh)
+    
+    return delta_payoff_pmh_, gamma_payoff_pmh_
+    
 def discounted_quarterly_payoff(next_q_payoff, q_to_next_q, interest_rate):
     discounted_q_payoff = next_q_payoff * np.exp(-interest_rate * (q_to_next_q)/252)
     # print("discounted q3 payoff")
@@ -86,3 +142,6 @@ def quarterly_payoff(aapl,amzn,googl,quarter):
     elif quarter==3:
         return 1000*1.075
     return 0
+
+
+

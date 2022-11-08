@@ -1,18 +1,34 @@
-from datetime import timedelta
-from utils.counting_days_function import days
-from utils.extract_data_function import extract_data
-from utils.payoff_function import maturity_payoff, discounted_quarterly_payoff, quarterly_payoff
-from utils.simulation_function import SimMultiGBM
-import numpy as np
-from dateutil.relativedelta import relativedelta
-import random
+from calendar import month, week
+from datetime import timedelta, datetime
+from tkinter import NS
 import pandas as pd
-from sklearn.linear_model import LinearRegression
-from utils.features import get_features
+import numpy as np
+import random
 import matplotlib.pyplot as plt
-
+from utils.payoff_function import calculate_option_price, get_payoff_pmh
+from utils.evaluation import evaluate_option_price
+from utils.simulation_function import SimMultiGBMAV,SimMultiGBM,SimMultiGBMpmh
+from utils.extract_data_function import extract_data
+from utils.counting_days_function import days
+from utils.ems_correction import EMSCorrection
+from utils.calculate_implied_volatility import calculate_cov_matrix
+from dateutil.relativedelta import relativedelta
 import warnings
 warnings.filterwarnings("ignore")
+
+experiment_details = {
+    'Nsim': 1000,
+    'latest_price_date': '2022-10-21',
+    'variance_reduction': True,
+    'GBM': 'multivariate',
+    'r': 0.0326,
+    'IV': True,
+    'min_sigma': 0.0001,
+    'max_sigma': 5,
+    'step': 0.00001,
+    'error': 0.25,
+    'EMS': True
+}
 
 aapl_barrier = 85.760
 amzn_barrier = 69.115
@@ -21,8 +37,8 @@ aapl_initial = 171.52
 amzn_initial = 138.23
 google_initial = 117.21
 
-date_to_predict, hist_end, end_date, q2_to_maturity, q3_to_maturity, q2, q3, total_trading_days, holidays = days(
-    latest_price_date='2022-10-24')
+date_to_predict, hist_end, end_date, q2_to_maturity, q3_to_maturity, q2, q3, total_trading_days, alternative_option_ttm, holidays = days(
+    latest_price_date=experiment_details['latest_price_date'])
 
 print(f"date_to_predict: {date_to_predict}")
 print(f"hist_end: {hist_end}")
@@ -35,273 +51,231 @@ print(f"total_trading_days: {total_trading_days}")
 print(f"holidays: {holidays}")
 trading_days_to_simulate = total_trading_days
 
+if experiment_details['IV']:
+    aapl_call_option_df = pd.read_csv('../Bloomberg_Data/aapl_call.csv')
+    aapl_call_option_df['Date'] = pd.to_datetime(aapl_call_option_df['Date'])
+    amzn_call_option_df = pd.read_csv('../Bloomberg_Data/amzn_call.csv')
+    amzn_call_option_df['Date'] = pd.to_datetime(amzn_call_option_df['Date'])
+    googl_call_option_df = pd.read_csv('../Bloomberg_Data/googl_call.csv')
+    googl_call_option_df['Date'] = pd.to_datetime(googl_call_option_df['Date'])
+
+    min_sigma = experiment_details['min_sigma']
+    max_sigma = experiment_details['max_sigma']
+    error = experiment_details['error']
+    step = experiment_details['step']
+    sigma_hat_list = np.arange(min_sigma, max_sigma + step, step)
+    right = len(sigma_hat_list) - 1
+    left = 0
+
 predicted_option_price = []
-expected_payoff_maturity = []
+expected_payoff_list = []
+aapl_IV_list = []
+amzn_IV_list = []
+googl_IV_list = []
+delta1 = []
+delta2 = []
+delta3 = []
+gamma1 = []
+gamma2 = []
+gamma3 = []
+
 counter = 0
 
 while date_to_predict <= end_date:
-    if counter == 1:
-        break
+    # if counter == 1:
+    #     break
 
-    if date_to_predict in holidays or date_to_predict.weekday() == 5 or date_to_predict.weekday() == 6:
+    if datetime.strftime(date_to_predict,
+                         "%Y-%m-%d") in holidays or date_to_predict.weekday() == 5 or date_to_predict.weekday() == 6:
         date_to_predict += relativedelta(days=+1)
         trading_days_to_simulate -= 1
         hist_end += relativedelta(days=+1)
+        alternative_option_ttm -= 1
         continue
 
     hist_start = hist_end - timedelta(days=365)
 
-    aapl = extract_data('/Users/irwinding/Desktop/MH4518/CZ4518-Simulation-in-Finance/data/24-10-2022/aapl.csv', hist_start, hist_end).rename(columns={'Close/Last': 'AAPL'})
-    amzn = extract_data('/Users/irwinding/Desktop/MH4518/CZ4518-Simulation-in-Finance/data/24-10-2022/amzn.csv', hist_start, hist_end).rename(columns={'Close/Last': 'AMZN'})
-    googl = extract_data('/Users/irwinding/Desktop/MH4518/CZ4518-Simulation-in-Finance/data/24-10-2022/googl.csv', hist_start, hist_end).rename(columns={'Close/Last': 'GOOGL'})
+    aapl = extract_data('../data/24-10-2022/aapl.csv', hist_start, hist_end).rename(columns={'Close/Last': 'AAPL'})
+    amzn = extract_data('../data/24-10-2022/amzn.csv', hist_start, hist_end).rename(columns={'Close/Last': 'AMZN'})
+    googl = extract_data('../data/24-10-2022/googl.csv', hist_start, hist_end).rename(columns={'Close/Last': 'GOOGL'})
     temp_df = aapl.merge(amzn, on=['Date'])
     AAG = temp_df.merge(googl, on=['Date'])
     n0 = len(AAG)
-    dates = AAG['Date']
     AAGprices = np.array(AAG.drop(columns=['Date']))
     AAGlogprices = np.log(AAGprices)
     AAGlogreturns = AAGlogprices[:n0 - 1, :] - AAGlogprices[1:, :]
 
     v = np.mean(AAGlogreturns, axis=0)
-    sigma = np.cov(AAGlogreturns, rowvar=False)
-    Nsim = 100000
+    Nsim = experiment_details['Nsim']
     T = trading_days_to_simulate
     dt = 1
     m = int(T / dt)
-    r = 0.04716
+    r = experiment_details['r']
+
+    # If IV setting is true covariance matrix is calculated from implied volatility of individual stocks  options market price
+    if experiment_details['IV']:
+        sigma, aapl_IV, amzn_IV, googl_IV = calculate_cov_matrix(aapl_call_option_df, amzn_call_option_df,
+                                                                 googl_call_option_df, r, alternative_option_ttm,
+                                                                 sigma_hat_list, left, right, error, date_to_predict,
+                                                                 AAGlogreturns)
+        aapl_IV_list.append(aapl_IV)
+        amzn_IV_list.append(amzn_IV)
+        googl_IV_list.append(googl_IV)
+    else:
+        sigma = np.cov(AAGlogreturns, rowvar=False)
+
     print(f"trading_days_to_simulate: {trading_days_to_simulate}")
-    # print(f"m: {m}")
 
     S0 = AAGprices[0, :]
-    S1 = np.zeros((Nsim, m + 1))
-    S2 = np.zeros((Nsim, m + 1))
-    S3 = np.zeros((Nsim, m + 1))
+    sim_aapl = []
+    sim_aapl_mh = []
+    sim_aapl_ph = []
+    sim_amzn = []
+    sim_amzn_mh = []
+    sim_amzn_ph = []
+    sim_googl = []
+    sim_googl_mh = []
+    sim_googl_ph = []
+
+    Z_matrix = []
     random.seed(4518)
 
-    for i in range(1, Nsim + 1):
-        S, Z = SimMultiGBM(S0, v, sigma, dt, T)
-        # print("S Matrix")
-        # print(S)
-        # print("-------")
-        # print("S[0:1, :]")
-        # print(S[0:1, :])
-        # print("-------")
-        # print(S[0])
-        # S1[i - 1:i, :] = S[0:1, :]
-        # S2[i - 1:i, :] = S[1:2, :]
-        # S3[i - 1:i, :] = S[2:3, :]
-        S1[i - 1] = S[0]
-        S2[i - 1] = S[1]
-        S3[i - 1] = S[2]
+    # Antithetic Variate reduction technique is applied if Variance Reduction is set to true
+    if experiment_details['variance_reduction']:
+        for i in range(1, int(Nsim / 2) + 1):
+            S, Stilde, Z = SimMultiGBMAV(S0, v, sigma, dt, T)
+            sim_aapl.append(S[0])
+            sim_aapl.append(Stilde[0])
+            sim_amzn.append(S[1])
+            sim_amzn.append(Stilde[1])
+            sim_googl.append(S[2])
+            sim_googl.append(Stilde[2])
+            S_pmh, Stilde_pmh = SimMultiGBMpmh(S0, v, sigma, dt, T, Z, variance_reduction=True)
+            sim_aapl_mh.append(S_pmh[0])
+            sim_aapl_mh.append(Stilde_pmh[0])
+            sim_aapl_ph.append(S_pmh[2])
+            sim_aapl_ph.append(Stilde_pmh[2])
+            sim_amzn_mh.append(S_pmh[3])
+            sim_amzn_mh.append(Stilde_pmh[3])
+            sim_amzn_ph.append(S_pmh[5])
+            sim_amzn_ph.append(Stilde_pmh[5])
+            sim_googl_mh.append(S_pmh[6])
+            sim_googl_mh.append(Stilde_pmh[6])
+            sim_googl_ph.append(S_pmh[8])
+            sim_googl_ph.append(Stilde_pmh[8])
 
-    # print("S1")
-    # print(S1)
-    # print("-------")
-    # print("S2")
-    # print(S2)
-    # print("-------")
-    # print("S3")
-    # print(S3)
-    # print("-------")
+    else:
+        for i in range(1, Nsim + 1):
+            S, Z = SimMultiGBM(S0, v, sigma, dt, T)
+            sim_aapl.append(S[0])
+            sim_amzn.append(S[1])
+            sim_googl.append(S[2])
+            S_pmh = SimMultiGBMpmh(S0, v, sigma, dt, T, Z, variance_reduction=False)
+            sim_aapl_mh.append(S_pmh[0])
+            sim_aapl_ph.append(S_pmh[2])
+            sim_amzn_mh.append(S_pmh[3])
+            sim_amzn_ph.append(S_pmh[5])
+            sim_googl_mh.append(S_pmh[6])
+            sim_googl_ph.append(S_pmh[8])
 
-    # S1 = EMS(S1,dt,r)
-    # # S2 = EMS(S2,dt,r)
-    # S3 = EMS(S3,dt,r)
+    if experiment_details['EMS']:
+        sim_aapl = EMSCorrection(sim_aapl, Nsim, r, dt, T)
+        sim_aapl_mh = EMSCorrection(sim_aapl_mh, Nsim, r, dt, T)
+        sim_aapl_ph = EMSCorrection(sim_aapl_ph, Nsim, r, dt, T)
+        sim_amzn = EMSCorrection(sim_amzn, Nsim, r, dt, T)
+        sim_amzn_mh = EMSCorrection(sim_amzn_mh, Nsim, r, dt, T)
+        sim_amzn_ph = EMSCorrection(sim_amzn_ph, Nsim, r, dt, T)
+        sim_googl = EMSCorrection(sim_googl, Nsim, r, dt, T)
+        sim_googl_mh = EMSCorrection(sim_googl_mh, Nsim, r, dt, T)
+        sim_googl_ph = EMSCorrection(sim_googl_ph, Nsim, r, dt, T)
 
-    pathMatrix = np.zeros((Nsim, 3, m+1))
+    q2_index = total_trading_days - q2_to_maturity if total_trading_days - q2_to_maturity >= 0 else None
+    q3_index = total_trading_days - q3_to_maturity if total_trading_days - q3_to_maturity >= 0 else None
+
+    option_prices = []
+    payoff_list = []
+    delta_payoff_pmh = []
+    gamma_payoff_pmh = []
     for i in range(Nsim):
-        pathMatrix[i][0] = S1[i]
-        pathMatrix[i][1] = S2[i]
-        pathMatrix[i][2] = S3[i]
-    # print(pathMatrix)
+        option_price, payoff = calculate_option_price(
+            aapl=sim_aapl[i],
+            amzn=sim_amzn[i],
+            googl=sim_googl[i],
+            T=trading_days_to_simulate,
+            total_trading_days=total_trading_days,
+            r=r,
+            q2_index=q2_index,
+            q3_index=q3_index
+        )
+        option_prices.append(
+            option_price
+        )
+        payoff_list.append(payoff)
+        delta_payoff_pmh_, gamma_payoff_pmh_ = get_payoff_pmh(S0, sim_aapl_mh[i], sim_aapl[i], sim_aapl_ph[i],
+                                                              sim_amzn_mh[i], sim_amzn[i], sim_amzn_ph[i], sim_googl_mh[i],
+                                                              sim_googl[i], sim_googl_ph[i],
+                                                              trading_days_to_simulate=trading_days_to_simulate,
+                                                              total_trading_days=total_trading_days, r=r, q2_index=q2_index,
+                                                              q3_index=q3_index)
+        # print(f"payoff_pmh_ for simulation {i + 1}")
+        # print(payoff_pmh_)
+        # print("-------")
+        delta_payoff_pmh.append(delta_payoff_pmh_)
+        gamma_payoff_pmh.append(gamma_payoff_pmh_)
 
-    q2_index = total_trading_days - q2_to_maturity
-    q3_index = total_trading_days - q3_to_maturity
+    expected_payoff_list.append(np.mean(payoff_list))
+    option_price = np.mean(option_prices)
+    predicted_option_price.append({'date': date_to_predict, 'predicted': option_price})
+    print(f"Derivative Price for {date_to_predict}")
+    print(option_price)
 
-    print(min(pathMatrix[0][0][0:q2_index]))
-    print(pathMatrix[0][0][q2_index])
-
-    payoff_matrix = np.zeros((Nsim, 3))
-    payoff_maturity = []
-
-    for i in range(0, Nsim):
-        maturity_payoff_ = maturity_payoff(aapl=S1[i], amzn=S2[i], googl=S3[i])
-        payoff_maturity.append(maturity_payoff_)
-        payoff_matrix[i][2] = maturity_payoff_
-        if i < 2:
-            print("Payoff maturity")
-            print(payoff_maturity)
-            print("-------")
-
-    discounted_payoff_q3 = np.zeros(Nsim)
-    q3_path_included = []
-    q3_path_excluded = []
-    q3_features = np.zeros((Nsim, 10))  # S1, S2, S3, S1^2, S2^2, S3^2, S1S2, S1S3, S2S3, current_worst_performing stock price
-    discounted_payoff_q3_ = discounted_quarterly_payoff(next_q_payoff=payoff_maturity[i], q_to_next_q=q3_to_maturity, interest_rate=r)
-    for i in range(0, Nsim):
-        if S1[i][q3_index] < aapl_initial or S2[i][q3_index] < amzn_initial or S3[i][q3_index] < google_initial: # no early redemption, skip path
-            # print(f"apple: {S1[q3_index]}, amzn: {S2[q3_index]}, google: {S3[q3_index]}\n")
-            # print(f"No early redemption opportunity for path {i+1}\n")
-            q3_path_excluded.append(i)
-            continue
-        discounted_payoff_q3[i] = discounted_payoff_q3_ # there is early redemption opportunity
-        # discounted payoff with it's associated features
-        q3_features[i] = get_features(S1[i], S2[i], S3[i], q3_index, Nsim)
-        q3_path_included.append(i)
-
-    # linear model: E[Y|S1=S1_q3, S2=S2_q3, S3=S3_q3] = a+bS1+cS2+dS3+eS1^2+fS2^2+gS3^2+hS1S2+iS1S3+jS2S3
-    print("q3 features")
-    print(q3_features)
+    delta_payoff_pmh = np.transpose(delta_payoff_pmh)
+    gamma_payoff_pmh = np.transpose(gamma_payoff_pmh)
+    print("delta_payoff_pmh")
+    print(delta_payoff_pmh)
     print("-------")
-    # print("discounted q3_payoff")
-    # print(discounted_payoff_q3)
-    # print("-------")
-    print("q3 path included")
-    print(q3_path_included)
+    print("gamma_payoff_pmh")
+    print(gamma_payoff_pmh)
     print("-------")
-    # print("path excluded")
-    # print(q3_path_excluded)
-    # print("-------")
-
-    # Preparing dataset for regression
-    X = pd.DataFrame(data=q3_features, columns=["S1", "S2", "S3", "S1sq", "S2sq", "S3sq", "S1S2", "S1S3", "S2S3", "Worst_Stock"])
-    y = pd.DataFrame(data=discounted_payoff_q3, columns=["Discounted Payoff"])
-    X = X.drop(q3_path_excluded)
-    y = y.drop(q3_path_excluded)
-    # print("X")
-    # print(X)
-    # print("-------")
-    # print("y")
-    # print(y)
-    # print("-------")
-    q3_reg = LinearRegression().fit(X, y)
-    print(f"regression coefficient: {q3_reg.coef_}, regression intercept: {q3_reg.intercept_}")
-
-    continuation_payoff = []
-    q3_exercise_payoff = []
-    if len(q3_path_included) > 0:
-        for valid_path in q3_path_included:
-            continuation_payoff_ = q3_reg.predict([q3_features[valid_path]])
-            continuation_payoff.append(continuation_payoff_[0])
-
-            q3_exercise_payoff_ = quarterly_payoff(S1[valid_path][0:q3_index+1], S2[valid_path][0:q3_index+1], S3[valid_path][0:q3_index+1], 3)
-            q3_exercise_payoff.append(q3_exercise_payoff_)
-
-    print("q3 continuation payoff")
-    print(continuation_payoff)
-    print("-------")
-    print("q3 exercise payoff")
-    print(q3_exercise_payoff)
-    print("-------")
-
-    for i in range(len(q3_path_excluded)):
-        path = q3_path_excluded[i]
-        payoff_matrix[path][1] = discounted_payoff_q3_
-
-    for i in range(len(q3_path_included)): # updating ITM paths
-        path = q3_path_included[i]
-        if continuation_payoff[i] < q3_exercise_payoff[i]: # payoff for continuing is smaller than exercising at q3, should exercise right
-            payoff_matrix[path][1] = q3_exercise_payoff[i]
-        else:
-            payoff_matrix[path][1] = discounted_payoff_q3_
-
-    discounted_payoff_q2 = np.zeros(Nsim)
-    q3_payoff = np.transpose(payoff_matrix)[1]
-    q2_path_included = []
-    q2_path_excluded = []
-    q2_features = np.zeros((Nsim, 10))  # S1, S2, S3, S1^2, S2^2, S3^2, S1S2, S1S3, S2S3, current_worst_performing stock price
-    for i in range(0, Nsim):
-        if S1[i][q2_index] < aapl_initial or S2[i][q2_index] < amzn_initial or S3[i][q2_index] < google_initial: # no early redemption, skip path
-            # print(f"apple: {S1[q2_index]}, amzn: {S2[q2_index]}, google: {S3[q2_index]}\n")
-            # print(f"No early redemption opportunity for path {i+1}\n")
-            q2_path_excluded.append(i)
-            continue
-        discounted_payoff_q2_ = discounted_quarterly_payoff(next_q_payoff=q3_payoff[i],
-                                                            q_to_next_q=q2_to_maturity - q3_to_maturity,
-                                                            interest_rate=r)
-        discounted_payoff_q2[i] = discounted_payoff_q2_ # there is early redemption opportunity
-        # discounted payoff with it's associated features
-        q2_features[i] = get_features(S1[i], S2[i], S3[i], q2_index, Nsim)
-        q2_path_included.append(i)
-
-    # linear model: E[Y|S1=S1_q2, S2=S2_q2, S3=S3_q2] = a+bS1+cS2+dS3+eS1^2+fS2^2+gS3^2+hS1S2+iS1S3+jS2S3
-    print("q2 features")
-    print(q2_features)
-    print("-------")
-    # print("discounted q2_payoff")
-    # print(discounted_payoff_q2)
-    # print("-------")
-    print("q2 path included")
-    print(q2_path_included)
-    print("-------")
-    # print("path excluded")
-    # print(q2_path_excluded)
-    # print("-------")
-
-    # Preparing dataset for regression
-    X = pd.DataFrame(data=q2_features, columns=["S1", "S2", "S3", "S1sq", "S2sq", "S3sq", "S1S2", "S1S3", "S2S3", "Worst_Stock"])
-    y = pd.DataFrame(data=discounted_payoff_q2, columns=["Discounted Payoff"])
-    X = X.drop(q2_path_excluded)
-    y = y.drop(q2_path_excluded)
-    # print("X")
-    # print(X)
-    # print("-------")
-    # print("y")
-    # print(y)
-    # print("-------")
-    q2_reg = LinearRegression().fit(X, y)
-    print(f"regression coefficient: {q2_reg.coef_}, regression intercept: {q2_reg.intercept_}")
-
-    continuation_payoff = []
-    q2_exercise_payoff = []
-    if len(q2_path_included) > 0:
-        for valid_path in q2_path_included:
-            continuation_payoff_ = q2_reg.predict([q2_features[valid_path]])
-            continuation_payoff.append(continuation_payoff_[0])
-
-            q2_exercise_payoff_ = quarterly_payoff(S1[valid_path][0:q2_index+1], S2[valid_path][0:q2_index+1], S3[valid_path][0:q2_index+1], 2)
-            q2_exercise_payoff.append(q2_exercise_payoff_)
-
-    print("q2 continuation payoff")
-    print(continuation_payoff)
-    print("-------")
-    print("q2 exercise payoff")
-    print(q2_exercise_payoff)
-    print("-------")
-
-    for i in range(len(q2_path_excluded)): # updating OTM paths
-        path = q2_path_excluded[i]
-        payoff_matrix[path][0] = discounted_payoff_q2_
-
-    for i in range(len(q2_path_included)):
-        path = q2_path_included[i]
-        if continuation_payoff[i] < q2_exercise_payoff[i]: # payoff for continuing is smaller than exercising at q2, should exercise right
-            payoff_matrix[path][0] = q2_exercise_payoff[i]
-        else:
-            payoff_matrix[path][0] = discounted_payoff_q2_
-
-    print("Payoff matrix")
-    print(payoff_matrix)
-    print("-------")
-    print("Derviative Price")
-    payoff_matrix_t = np.transpose(payoff_matrix)
-    print(np.mean(payoff_matrix_t[0]))
-    print("-------")
-        # if cur_date<q2:
-        #     payoff_q2.append(quarterly_payoff(S1[i,:len(S1[i,:])-q2_to_maturity],S2[i,:len(S2[i,:])-q2_to_maturity],S3[i,:len(S3[i,:])-q2_to_maturity],2))
-
-        # if cur_date<q3:
-        #     payoff_q3.append(quarterly_payoff(S1[i,:len(S1[i,:])-q3_to_maturity],S2[i,:len(S2[i,:])-q3_to_maturity],S3[i,:len(S3[i,:])-q3_to_maturity],3))
-
-    cur_expected_payoff = np.mean(payoff_maturity)
-    expected_payoff_maturity.append(cur_expected_payoff)
-
-    # TODO Apply regression to find the coefficient for each payoff
-    # option_price = np.exp(-r*(trading_days_to_predict/total_trading_days))*cur_expected_payoff*w_1 + np.exp(-r/2)*np.mean(payoff_q2)*w_2 + np.exp(-r*3/4)*np.mean(payoff_q3)*w_3
-    option_price = np.exp(-r * (trading_days_to_simulate / total_trading_days)) * cur_expected_payoff
-    predicted_option_price.append(option_price)
+    delta1.append(np.mean(delta_payoff_pmh[0]))
+    delta2.append(np.mean(delta_payoff_pmh[1]))
+    delta3.append(np.mean(delta_payoff_pmh[2]))
+    gamma1.append(np.mean(gamma_payoff_pmh[0]))
+    gamma2.append(np.mean(gamma_payoff_pmh[1]))
+    gamma3.append(np.mean(gamma_payoff_pmh[2]))
+    for i in range(len(S0)):
+        print(f"Delta for stock {i+1}: {np.mean(delta_payoff_pmh[i])}")
+        print(f"Gamma for stock {i + 1}: {np.mean(gamma_payoff_pmh[i])}")
 
     date_to_predict += relativedelta(days=+1)
     trading_days_to_simulate -= 1
     hist_end += relativedelta(days=+1)
-    counter+=1
+    alternative_option_ttm -= 1
+
+    counter += 1
+
+predicted_option_price = pd.DataFrame(predicted_option_price)
+predicted_option_price['date'] = pd.to_datetime(predicted_option_price['date'])
+# Scale back to 100%
+predicted_option_price['predicted'] = predicted_option_price['predicted'] / 10
+actual_option_price = pd.read_csv('../data/derivative_01_11_22.csv')
+actual_option_price['date'] = pd.to_datetime(actual_option_price['date'], format='%Y-%m-%d')
+combined = predicted_option_price.merge(actual_option_price, left_on=['date'], right_on=['date'], validate='one_to_one')
+combined = combined.set_index('date')
+
+plt.figure(figsize=(30, 10))
+plt.plot(delta1, label='delta 1', color='blue')
+plt.plot(delta2, label='delta 2', color='red')
+plt.plot(delta3, label='delta 3', color='green')
+plt.legend(loc='upper left')
+plt.savefig(f'../results/AV_IV_EMS_delta_movements_{Nsim}.png')
+
+plt.figure(figsize=(30, 10))
+plt.plot(gamma1, label='gamma 1', color='blue')
+plt.plot(gamma2, label='gamma 2', color='red')
+plt.plot(gamma3, label='gamma 3', color='green')
+plt.legend(loc='upper left')
+plt.savefig(f'../results/AV_IV_EMS_gamma_movements_{Nsim}.png')
+
+
+# evaluate_option_price(combined['predicted'], combined['value'], expected_payoff_list, experiment_details)

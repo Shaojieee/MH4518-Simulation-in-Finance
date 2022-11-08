@@ -35,7 +35,7 @@ amzn_initial = 138.23
 google_initial = 117.21
 
 
-date_to_predict, hist_end, end_date, q2_to_maturity, q3_to_maturity, q2, q3, total_trading_days, holidays = days(
+date_to_predict, hist_end, end_date, q2_to_maturity, q3_to_maturity, q2, q3, total_trading_days, alternative_option_ttm, holidays = days(
     latest_price_date=experiment_details['latest_price_date'])
 
 print(f"date_to_predict: {date_to_predict}")
