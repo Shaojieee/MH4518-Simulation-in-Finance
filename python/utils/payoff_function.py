@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 aapl_barrier = 85.760
 amzn_barrier = 69.115
@@ -8,27 +9,68 @@ amzn_initial = 138.23
 google_initial = 117.21
 
 
-def calculate_option_price(aapl, amzn, googl, T, total_trading_days, r, q2_index=None, q3_index=None):
+def calculate_option_price(aapl, amzn, googl, T, total_trading_days, q2, q3, maturity, cur, q2_index, q3_index, interpolate_r, r):
     q2_autocall = False
     q3_autocall = False
     barrier_event = False
+
     if q2_index:
         if aapl[q2_index] > aapl_initial and amzn[q2_index] > amzn_initial and googl[q2_index] > google_initial:
             payoff_ = 1000*1.05
             q2_autocall = True
-            # return np.exp(-r * (q2_index)/total_trading_days) * payoff_
-            return np.exp(-r * (q2_index) / 252) * payoff_,payoff_
+            if r==None:
+                num_days = (q2 - cur).days
+                r = calculate_r(num_days, cur, interpolate_r)
+            return np.exp(-r * (q2_index) / total_trading_days) * payoff_,payoff_, r
 
     if q3_index:
         if aapl[q3_index] > aapl_initial and amzn[q3_index] > amzn_initial and googl[q3_index] > google_initial:
             payoff_ = 1000*1.075
             q3_autocall = True
-            # return np.exp(-r * (q3_index)/total_trading_days) * payoff_
-            return np.exp(-r * (q3_index) / 252) * payoff_,payoff_
+            if r==None:
+                num_days = (q3 - cur).days
+                r = calculate_r(num_days, cur, interpolate_r)
+            return np.exp(-r * (q3_index) / total_trading_days) * payoff_,payoff_, r
 
-    # return np.exp(-r * T/total_trading_days) * maturity_payoff(aapl, amzn, googl)
     maturity_payoff_ = maturity_payoff(aapl, amzn, googl)
-    return np.exp(-r * T / 252) * maturity_payoff_,maturity_payoff_
+    if r==None:
+        num_days = (maturity - cur).days
+        r = calculate_r(num_days, cur, interpolate_r)
+    return np.exp(-r * T / total_trading_days) * maturity_payoff_,maturity_payoff_, r
+
+
+def calculate_r(num_days, cur, interpolate_r):
+    rates = pd.read_csv('../data/USTREASURY-YIELD_04_11_22.csv')
+    rates['Date'] = pd.to_datetime(rates['Date'], format='%Y-%m-%d')
+    rates = rates.set_index('Date')
+    rates = rates.asfreq('D')
+    rates = rates.ffill()
+
+    rates = rates.loc[cur.strftime('%Y-%m-%d'), ].to_dict()
+
+    if not interpolate_r:
+        return rates['1 YR']/100.0
+
+    if num_days>=60 and num_days<90:
+        grad = (rates['3 MO'] - rates['2 MO'])/30
+        x_intercept = -(grad*90 - rates['3 MO'])
+
+        return (grad*num_days+x_intercept)/100.0
+
+    elif num_days>=90 and num_days<180:
+        grad = (rates['6 MO'] - rates['3 MO']) / 90
+        x_intercept = -(grad * 90 - rates['3 MO'])
+
+        return (grad * num_days + x_intercept)/100.0
+
+    elif num_days>=180 and num_days<365.25:
+        grad = (rates['1 YR'] - rates['6 MO']) / (365.25-180)
+        x_intercept = -(grad * 180 - rates['6 MO'])
+
+        return (grad * num_days + x_intercept)/100.0
+
+    return (rates['1 YR'])/100.0
+
 
 
 def maturity_payoff(aapl, amzn, googl):
