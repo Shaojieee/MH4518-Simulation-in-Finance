@@ -6,7 +6,10 @@ from pathlib import Path
 import numpy as np
 
 
-def evaluate_option_price(predicted, actual, expected_payoff_list, experiment_details):
+def evaluate_option_price(predicted, actual, expected_payoff_list, experiment_details,
+                          delta_aapl, delta_amzn, delta_googl,
+                          gamma_aapl, gamma_amzn, gamma_googl
+                          ):
 
     mse = mean_squared_error(actual, predicted)
     mae = mean_absolute_error(actual, predicted)
@@ -30,3 +33,17 @@ def evaluate_option_price(predicted, actual, expected_payoff_list, experiment_de
     plt.plot(actual, label='Actual', color='blue')
     plt.legend(loc='upper left')
     plt.savefig(f'../results/{folder}/results_{variance_reduction}_{Nsim}.png')
+
+    plt.figure(figsize=(30, 10))
+    plt.plot(delta_aapl, label='AAPL')
+    plt.plot(delta_amzn, label='AMZN')
+    plt.plot(delta_googl, label='GOOGL')
+    plt.legend(loc='upper left')
+    plt.savefig(f'../results/{folder}/delta_movements.png')
+
+    plt.figure(figsize=(30, 10))
+    plt.plot(gamma_aapl, label='AAPL')
+    plt.plot(gamma_amzn, label='AMZN')
+    plt.plot(gamma_googl, label='GOOGL')
+    plt.legend(loc='upper left')
+    plt.savefig(f'../results/{folder}/gamma_movements.png')
