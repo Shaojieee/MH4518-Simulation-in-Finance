@@ -38,7 +38,7 @@ def SimMultiGBMAV(S0, v, sigma, Deltat, T):
     return S, Stilde, Z
 
 
-def SimMultiGBMpmh(S0, v, sigma, Deltat, T, Z, variance_reduction):
+def SimMultiGBMpmh(S0, v, sigma, Deltat, T, Z, variance_reduction, h_prop):
     m = int(T / Deltat)
     p = len(S0)
     S = np.zeros((3*p, m+1))
@@ -47,9 +47,8 @@ def SimMultiGBMpmh(S0, v, sigma, Deltat, T, Z, variance_reduction):
     h = []
     S0_ph = []
     S0_mh = []
-
     for i in range(p):
-        h.append(0.01*S0[i])
+        h.append(h_prop*S0[i])
         S0_ph.append(S0[i] + h[i])
         S0_mh.append(S0[i] - h[i])
 
