@@ -53,7 +53,7 @@ def calculate_derivative(experiment_details):
         googl_IV_df = pd.read_csv('../Bloomberg_Data/googl_IV.csv')
         googl_IV_df['Date'] = pd.to_datetime(googl_IV_df['Date'], format='%Y-%m-%d')
 
-    if 'r' in experiment_details:
+    if 'r' not in experiment_details:
         rates = pd.read_csv('../data/04-11-2022/USTREASURY-YIELD_04_11_22.csv')
         rates['Date'] = pd.to_datetime(rates['Date'], format='%Y-%m-%d')
         rates = rates.set_index('Date')
@@ -106,10 +106,10 @@ def calculate_derivative(experiment_details):
         AAGlogprices = np.log(AAGprices)
         AAGlogreturns = AAGlogprices[:n0 - 1, :] - AAGlogprices[1:, :]
 
-        v = np.mean(AAGlogreturns, axis=0)
-        v_aapl.append(v[0])
-        v_amzn.append(v[1])
-        v_googl.append(v[2])
+        # v = np.mean(AAGlogreturns, axis=0)
+        # v_aapl.append(v[0])
+        # v_amzn.append(v[1])
+        # v_googl.append(v[2])
         Nsim = experiment_details['Nsim']
         T = trading_days_to_simulate
         dt = 1
@@ -131,6 +131,11 @@ def calculate_derivative(experiment_details):
         sigma_aapl.append(np.sqrt(sigma.diagonal())[0])
         sigma_amzn.append(np.sqrt(sigma.diagonal())[1])
         sigma_googl.append(np.sqrt(sigma.diagonal())[2])
+
+        v = r/total_trading_days - sigma.diagonal()/2
+        v_aapl.append(v[0])
+        v_amzn.append(v[1])
+        v_googl.append(v[2])
 
         print(f"trading_days_to_simulate: {trading_days_to_simulate}")
 
@@ -156,20 +161,21 @@ def calculate_derivative(experiment_details):
                 sim_amzn.append(Stilde[1])
                 sim_googl.append(S[2])
                 sim_googl.append(Stilde[2])
-                S_pmh, Stilde_pmh = SimMultiGBMpmh(S0, v, sigma, dt, T, Z, variance_reduction=True,
-                                                   h_prop=experiment_details['h_prop'])
-                sim_aapl_mh.append(S_pmh[0])
-                sim_aapl_mh.append(Stilde_pmh[0])
-                sim_aapl_ph.append(S_pmh[2])
-                sim_aapl_ph.append(Stilde_pmh[2])
-                sim_amzn_mh.append(S_pmh[3])
-                sim_amzn_mh.append(Stilde_pmh[3])
-                sim_amzn_ph.append(S_pmh[5])
-                sim_amzn_ph.append(Stilde_pmh[5])
-                sim_googl_mh.append(S_pmh[6])
-                sim_googl_mh.append(Stilde_pmh[6])
-                sim_googl_ph.append(S_pmh[8])
-                sim_googl_ph.append(Stilde_pmh[8])
+                if experiment_details['delta_gamma']:
+                    S_pmh, Stilde_pmh = SimMultiGBMpmh(S0, v, sigma, dt, T, Z, variance_reduction=True,
+                                                       h_prop=experiment_details['h_prop'])
+                    sim_aapl_mh.append(S_pmh[0])
+                    sim_aapl_mh.append(Stilde_pmh[0])
+                    sim_aapl_ph.append(S_pmh[2])
+                    sim_aapl_ph.append(Stilde_pmh[2])
+                    sim_amzn_mh.append(S_pmh[3])
+                    sim_amzn_mh.append(Stilde_pmh[3])
+                    sim_amzn_ph.append(S_pmh[5])
+                    sim_amzn_ph.append(Stilde_pmh[5])
+                    sim_googl_mh.append(S_pmh[6])
+                    sim_googl_mh.append(Stilde_pmh[6])
+                    sim_googl_ph.append(S_pmh[8])
+                    sim_googl_ph.append(Stilde_pmh[8])
 
         else:
             for i in range(1, Nsim + 1):
@@ -177,14 +183,15 @@ def calculate_derivative(experiment_details):
                 sim_aapl.append(S[0])
                 sim_amzn.append(S[1])
                 sim_googl.append(S[2])
-                S_pmh = SimMultiGBMpmh(S0, v, sigma, dt, T, Z, variance_reduction=False,
-                                       h_prop=experiment_details['h_prop'])
-                sim_aapl_mh.append(S_pmh[0])
-                sim_aapl_ph.append(S_pmh[2])
-                sim_amzn_mh.append(S_pmh[3])
-                sim_amzn_ph.append(S_pmh[5])
-                sim_googl_mh.append(S_pmh[6])
-                sim_googl_ph.append(S_pmh[8])
+                if experiment_details['delta_gamma']:
+                    S_pmh = SimMultiGBMpmh(S0, v, sigma, dt, T, Z, variance_reduction=False,
+                                           h_prop=experiment_details['h_prop'])
+                    sim_aapl_mh.append(S_pmh[0])
+                    sim_aapl_ph.append(S_pmh[2])
+                    sim_amzn_mh.append(S_pmh[3])
+                    sim_amzn_ph.append(S_pmh[5])
+                    sim_googl_mh.append(S_pmh[6])
+                    sim_googl_ph.append(S_pmh[8])
 
         aapl_before_emc = sim_aapl
         amzn_before_emc = sim_amzn
@@ -192,14 +199,15 @@ def calculate_derivative(experiment_details):
 
         if experiment_details['EMS']:
             sim_aapl = EMSCorrection(sim_aapl, Nsim, r, dt, T)
-            sim_aapl_mh = EMSCorrection(sim_aapl_mh, Nsim, r, dt, T)
-            sim_aapl_ph = EMSCorrection(sim_aapl_ph, Nsim, r, dt, T)
             sim_amzn = EMSCorrection(sim_amzn, Nsim, r, dt, T)
-            sim_amzn_mh = EMSCorrection(sim_amzn_mh, Nsim, r, dt, T)
-            sim_amzn_ph = EMSCorrection(sim_amzn_ph, Nsim, r, dt, T)
             sim_googl = EMSCorrection(sim_googl, Nsim, r, dt, T)
-            sim_googl_mh = EMSCorrection(sim_googl_mh, Nsim, r, dt, T)
-            sim_googl_ph = EMSCorrection(sim_googl_ph, Nsim, r, dt, T)
+            if experiment_details['delta_gamma']:
+                sim_aapl_mh = EMSCorrection(sim_aapl_mh, Nsim, r, dt, T)
+                sim_aapl_ph = EMSCorrection(sim_aapl_ph, Nsim, r, dt, T)
+                sim_amzn_mh = EMSCorrection(sim_amzn_mh, Nsim, r, dt, T)
+                sim_amzn_ph = EMSCorrection(sim_amzn_ph, Nsim, r, dt, T)
+                sim_googl_mh = EMSCorrection(sim_googl_mh, Nsim, r, dt, T)
+                sim_googl_ph = EMSCorrection(sim_googl_ph, Nsim, r, dt, T)
 
         q2_index = total_trading_days - q2_to_maturity if total_trading_days - q2_to_maturity >= 0 else None
         q3_index = total_trading_days - q3_to_maturity if total_trading_days - q3_to_maturity >= 0 else None
@@ -230,23 +238,24 @@ def calculate_derivative(experiment_details):
                 option_price
             )
             payoff_list.append(payoff)
-            delta_payoff_pmh_, gamma_payoff_pmh_ = get_payoff_pmh(S0, sim_aapl_mh[i], sim_aapl[i], sim_aapl_ph[i],
-                                                                  sim_amzn_mh[i], sim_amzn[i], sim_amzn_ph[i],
-                                                                  sim_googl_mh[i],
-                                                                  sim_googl[i], sim_googl_ph[i],
-                                                                  trading_days_to_simulate=trading_days_to_simulate,
-                                                                  total_trading_days=total_trading_days,
-                                                                  r=experiment_details[
-                                                                      'r'] if 'r' in experiment_details else None,
-                                                                  q2_index=q2_index, q3_index=q3_index,
-                                                                  q2=q2, q3=q3,
-                                                                  interpolate_r=experiment_details['interpolate_r'],
-                                                                  h_prop=experiment_details['h_prop'],
-                                                                  maturity=datetime.strptime('2023-08-22', "%Y-%m-%d"),
-                                                                  cur=date_to_predict,
-                                                                  rates=rates)
-            delta_payoff_pmh.append(delta_payoff_pmh_)
-            gamma_payoff_pmh.append(gamma_payoff_pmh_)
+            if experiment_details['delta_gamma']:
+                delta_payoff_pmh_, gamma_payoff_pmh_ = get_payoff_pmh(S0, sim_aapl_mh[i], sim_aapl[i], sim_aapl_ph[i],
+                                                                      sim_amzn_mh[i], sim_amzn[i], sim_amzn_ph[i],
+                                                                      sim_googl_mh[i],
+                                                                      sim_googl[i], sim_googl_ph[i],
+                                                                      trading_days_to_simulate=trading_days_to_simulate,
+                                                                      total_trading_days=total_trading_days,
+                                                                      r=experiment_details[
+                                                                          'r'] if 'r' in experiment_details else None,
+                                                                      q2_index=q2_index, q3_index=q3_index,
+                                                                      q2=q2, q3=q3,
+                                                                      interpolate_r=experiment_details['interpolate_r'],
+                                                                      h_prop=experiment_details['h_prop'],
+                                                                      maturity=datetime.strptime('2023-08-22', "%Y-%m-%d"),
+                                                                      cur=date_to_predict,
+                                                                      rates=rates)
+                delta_payoff_pmh.append(delta_payoff_pmh_)
+                gamma_payoff_pmh.append(gamma_payoff_pmh_)
 
         expected_payoff_list.append(np.mean(payoff_list))
         option_price = np.mean(option_prices)
@@ -254,15 +263,16 @@ def calculate_derivative(experiment_details):
         print(f"Derivative Price for {date_to_predict}")
         print(option_price)
 
-        delta_payoff_pmh = np.transpose(delta_payoff_pmh)
-        gamma_payoff_pmh = np.transpose(gamma_payoff_pmh)
+        if experiment_details['delta_gamma']:
+            delta_payoff_pmh = np.transpose(delta_payoff_pmh)
+            gamma_payoff_pmh = np.transpose(gamma_payoff_pmh)
 
-        delta_aapl.append(np.mean(delta_payoff_pmh[0]))
-        delta_amzn.append(np.mean(delta_payoff_pmh[1]))
-        delta_googl.append(np.mean(delta_payoff_pmh[2]))
-        gamma_aapl.append(np.mean(gamma_payoff_pmh[0]))
-        gamma_amzn.append(np.mean(gamma_payoff_pmh[1]))
-        gamma_googl.append(np.mean(gamma_payoff_pmh[2]))
+            delta_aapl.append(np.mean(delta_payoff_pmh[0]))
+            delta_amzn.append(np.mean(delta_payoff_pmh[1]))
+            delta_googl.append(np.mean(delta_payoff_pmh[2]))
+            gamma_aapl.append(np.mean(gamma_payoff_pmh[0]))
+            gamma_amzn.append(np.mean(gamma_payoff_pmh[1]))
+            gamma_googl.append(np.mean(gamma_payoff_pmh[2]))
 
         date_to_predict += relativedelta(days=+1)
         trading_days_to_simulate -= 1
